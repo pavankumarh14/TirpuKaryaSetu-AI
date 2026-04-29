@@ -1,0 +1,19 @@
+{
+  "app_name": "TirpuKaryaSetu AI",
+  "tagline": "From Court Judgments to Verified Government Actions",
+  "dashboard": "Dashboard",
+  "cases": "Cases",
+  "review_queue": "Review Queue",
+  "upload_proof": "Upload Proof",
+  "run_extraction": "Run AI Extraction",
+  "approve": "Approve",
+  "assign": "Assign",
+  "edit": "Edit",
+  "reject": "Reject",
+  "mark_completed": "Mark Completed",
+  "pending_review": "Pending Review",
+  "verified": "Verified",
+  "completed": "Completed",
+  "high_risk": "High Risk",
+  "contempt_risk": "Contempt Risk"
+}
