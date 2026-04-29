@@ -1,4 +1,3 @@
-"""TirpuKaryaSetu AI - Backend Application"""
+# backend/app/routers/__init__.py
 
-__version__ = "1.0.0"
-__project__ = "TirpuKaryaSetu-AI"
+from . import actions, cases, dashboard, proofs, review
