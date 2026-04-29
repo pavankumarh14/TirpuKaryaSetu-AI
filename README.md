@@ -25,11 +25,13 @@ Indian courts generate thousands of judgments daily, but there's a critical gap 
 
 TirpuKaryaSetu AI is designed with bilingual usability in mind for government workflows.
 
+**AI-powered system that transforms court judgment PDFs into verified, accountable government action workflows with bilingual support in English and Kannada (ಕನ್ನಡ).**
+
 - English interface support
 - Kannada (ಕನ್ನಡ) interface labels
 - OCR configuration prepared for English + Kannada text processing
 - UI localization structure for multilingual rollout
-**AI-powered system that transforms court judgment PDFs into verified, accountable government action workflows with bilingual support in English and Kannada (ಕನ್ನಡ).**
+
 
 ## Project Structure
 
