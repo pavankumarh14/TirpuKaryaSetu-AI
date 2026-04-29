@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import actions, cases, dashboard, review
+from app.routers import actions, cases, dashboard, proofs, review
 
 # Ensure storage directories exist
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -43,6 +43,7 @@ app.include_router(cases.router, prefix="/api/cases", tags=["Cases"])
 app.include_router(actions.router, prefix="/api/actions", tags=["Actions"])
 app.include_router(review.router, prefix="/api/review", tags=["Review"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(proofs.router, prefix="/api/proofs", tags=["Proofs"])
 
 
 @app.get("/api/health")
