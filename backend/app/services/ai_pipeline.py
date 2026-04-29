@@ -1,0 +1,160 @@
+# backend/app/services/ai_pipeline.py
+
+import json
+import re
+from datetime import datetime
+from typing import Dict, List, Optional
+
+import google.generativeai as genai
+
+from app.config import settings
+from app.prompts.extraction import EXTRACTION_SYSTEM_PROMPT
+from app.services.rule_engine import enrich_action_with_rules
+
+
+def chunk_text(text: str, chunk_size: int = 2500, overlap: int = 250) -> List[str]:
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + chunk_size
+        chunks.append(text[start:end])
+        start = max(end - overlap, end)
+    return chunks
+
+
+def simple_retrieve_relevant_chunks(text: str, top_k: int = 6) -> List[str]:
+    chunks = chunk_text(text)
+    scored = []
+
+    keywords = [
+        "directed",
+        "ordered",
+        "within",
+        "respondent",
+        "petitioner",
+        "department",
+        "compliance",
+        "appeal",
+        "shall",
+    ]
+
+    for chunk in chunks:
+        score = sum(chunk.lower().count(keyword) for keyword in keywords)
+        scored.append((score, chunk))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [chunk for score, chunk in scored[:top_k] if chunk.strip()]
+
+
+def _safe_json_loads(raw_text: str) -> Dict:
+    cleaned = raw_text.strip()
+    cleaned = re.sub(r"^```json", "", cleaned, flags=re.IGNORECASE).strip()
+    cleaned = re.sub(r"```$", "", cleaned).strip()
+    return json.loads(cleaned)
+
+
+def local_fallback_extract(text: str) -> Dict:
+    case_number_match = re.search(r"(W\.?P\.?|Case)\s*No\.?\s*[:\-]?\s*([A-Za-z0-9\/\-\(\)]+)", text, re.IGNORECASE)
+    case_number = case_number_match.group(2).strip() if case_number_match else None
+
+    court_match = re.search(r"IN THE (.+?COURT.+)", text, re.IGNORECASE)
+    court_name = court_match.group(1).strip() if court_match else None
+
+    directives = []
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    for sentence in sentences:
+        lowered = sentence.lower()
+        if any(word in lowered for word in ["directed", "shall", "within", "ordered", "compliance"]):
+            if len(sentence.strip()) > 40:
+                directives.append(sentence.strip())
+
+    actions = []
+    for sentence in directives[:5]:
+        deadline_expression = None
+        deadline_match = re.search(r"within\s+[^.,;]+", sentence, re.IGNORECASE)
+        if deadline_match:
+            deadline_expression = deadline_match.group(0).strip()
+
+        actions.append(
+            {
+                "action_text": sentence[:300],
+                "owner_department": None,
+                "deadline_expression": deadline_expression,
+                "risk_level": "medium",
+                "recommendation": "Officer should verify and assign this direction for compliance.",
+                "appeal_window_expression": None,
+                "contempt_risk": False,
+                "confidence": 0.68,
+                "source_evidence": sentence,
+            }
+        )
+
+    result = {
+        "case_metadata": {
+            "case_number": case_number,
+            "court_name": court_name,
+            "court_type": "High Court" if court_name and "high court" in court_name.lower() else None,
+            "order_date": datetime.utcnow().isoformat(),
+            "judgment_type": "compliance",
+            "petitioner": None,
+            "respondent_department": None,
+            "disposal_status": "disposed" if "disposed" in text.lower() else None,
+            "language": "kn" if any("\u0c80" <= ch <= "\u0cff" for ch in text) else "en",
+        },
+        "extractions": [],
+        "actions": actions,
+    }
+
+    for key, value in result["case_metadata"].items():
+        if value is not None:
+            result["extractions"].append(
+                {
+                    "field_name": key,
+                    "field_value": str(value),
+                    "confidence": 0.60,
+                    "source_page": 1,
+                    "source_text_span": str(value),
+                }
+            )
+
+    return result
+
+
+def gemini_extract(text: str) -> Dict:
+    if not settings.GEMINI_API_KEY:
+        return local_fallback_extract(text)
+
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+    model = genai.GenerativeModel(settings.GEMINI_MODEL)
+
+    relevant_chunks = simple_retrieve_relevant_chunks(text)
+    prompt = f"""
+{EXTRACTION_SYSTEM_PROMPT}
+
+Judgment text chunks:
+{json.dumps(relevant_chunks, ensure_ascii=False)}
+"""
+
+    response = model.generate_content(prompt)
+    return _safe_json_loads(response.text)
+
+
+def run_ai_extraction(text: str) -> Dict:
+    result = gemini_extract(text)
+
+    case_metadata = result.get("case_metadata", {})
+    order_date = None
+
+    raw_order_date = case_metadata.get("order_date")
+    if raw_order_date:
+        try:
+            order_date = datetime.fromisoformat(raw_order_date.replace("Z", "+00:00"))
+        except Exception:
+            order_date = None
+
+    enriched_actions = []
+    for action in result.get("actions", []):
+        enriched_actions.append(enrich_action_with_rules(action, order_date))
+
+    result["actions"] = enriched_actions
+    return result
