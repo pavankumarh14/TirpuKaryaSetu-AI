@@ -1,9 +1,11 @@
-"""Pydantic schemas for API request/response validation"""
+# backend/app/schemas.py
 
-from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, List
-from app.models import CaseStatus, ActionStatus, RiskLevel, ReviewAction
+from typing import Any, List, Optional
+
+from pydantic import BaseModel, Field
+
+from app.models import ActionStatus, CaseStatus, ReviewAction, RiskLevel
 
 
 class ExtractionBase(BaseModel):
@@ -44,6 +46,20 @@ class ActionCreate(ActionBase):
     case_id: int
 
 
+class ActionUpdate(BaseModel):
+    action_text: Optional[str] = None
+    owner_department: Optional[str] = None
+    deadline: Optional[datetime] = None
+    risk_level: Optional[RiskLevel] = None
+    recommendation: Optional[str] = None
+    status: Optional[ActionStatus] = None
+    assigned_to: Optional[str] = None
+    appeal_window: Optional[datetime] = None
+    contempt_risk: Optional[bool] = None
+    confidence: Optional[float] = None
+    source_evidence: Optional[str] = None
+
+
 class Action(ActionBase):
     id: int
     case_id: int
@@ -75,6 +91,7 @@ class Review(ReviewCreate):
 class ProofCreate(BaseModel):
     proof_type: str
     uploaded_by: str
+    action_id: Optional[int] = None
 
 
 class Proof(ProofCreate):
@@ -82,6 +99,7 @@ class Proof(ProofCreate):
     case_id: int
     file_path: str
     verified: bool
+    verified_by: Optional[str] = None
     uploaded_at: datetime
 
     class Config:
@@ -99,18 +117,23 @@ class CaseBase(BaseModel):
 
 
 class CaseCreate(CaseBase):
-    pass
+    disposal_status: Optional[str] = None
+    order_date: Optional[datetime] = None
 
 
 class Case(CaseBase):
     id: int
     status: CaseStatus
+    source_pdf_path: Optional[str] = None
+    extracted_text: Optional[str] = None
+    ocr_text: Optional[str] = None
+    disposal_status: Optional[str] = None
     order_date: Optional[datetime] = None
     received_date: datetime
     created_at: datetime
     updated_at: Optional[datetime] = None
-    extractions: List[Extraction] = []
-    actions: List[Action] = []
+    extractions: List[Extraction] = Field(default_factory=list)
+    actions: List[Action] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -124,3 +147,18 @@ class DashboardStats(BaseModel):
     pending_actions: int
     high_risk_actions: int
     contempt_risk_count: int
+
+
+class DepartmentWorkload(BaseModel):
+    department: str
+    total_actions: int
+    pending_actions: int
+    completed_actions: int
+
+
+class AIExtractResponse(BaseModel):
+    case_id: int
+    status: str
+    metadata: dict[str, Any]
+    actions_created: int
+    extractions_created: int
