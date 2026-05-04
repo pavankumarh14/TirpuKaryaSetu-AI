@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Dashboard from "./components/Dashboard";
 import CaseList from "./components/CaseList";
 import CaseDetail from "./components/CaseDetail";
+import CaseUpload from "./components/CaseUpload";
 import ReviewPanel from "./components/ReviewPanel";
 import { getCases, getDashboardStats, getReviewQueue } from "./services/api";
 
@@ -61,14 +62,17 @@ export default function App() {
         )}
 
         {activeTab === "cases" && (
-          <div style={styles.twoCol}>
-            <CaseList
-              cases={cases}
-              selectedCase={selectedCase}
-              onSelectCase={setSelectedCase}
-              onRefresh={loadAll}
-            />
-            <CaseDetail caseItem={selectedCase} onRefresh={loadAll} />
+          <div>
+            <CaseUpload onUploadSuccess={loadAll} />
+            <div style={styles.twoCol}>
+              <CaseList
+                cases={cases}
+                selectedCase={selectedCase}
+                onSelectCase={setSelectedCase}
+                onRefresh={loadAll}
+              />
+              <CaseDetail caseItem={selectedCase} onRefresh={loadAll} />
+            </div>
           </div>
         )}
 

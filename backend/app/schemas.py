@@ -1,7 +1,7 @@
 # backend/app/schemas.py
 
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -159,6 +159,6 @@ class DepartmentWorkload(BaseModel):
 class AIExtractResponse(BaseModel):
     case_id: int
     status: str
-    metadata: dict[str, Any]
+    metadata: Dict[str, Any]
     actions_created: int
     extractions_created: int

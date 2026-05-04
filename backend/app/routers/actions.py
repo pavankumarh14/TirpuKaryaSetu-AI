@@ -1,5 +1,7 @@
 # backend/app/routers/actions.py
 
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -11,10 +13,10 @@ from app.services.audit import create_audit_log
 router = APIRouter()
 
 
-@router.get("", response_model=list[ActionSchema])
+@router.get("", response_model=List[ActionSchema])
 def list_actions(
-    case_id: int | None = None,
-    status: ActionStatus | None = None,
+    case_id: Optional[int] = None,
+    status: Optional[ActionStatus] = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(Action)

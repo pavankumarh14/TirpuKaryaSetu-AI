@@ -1,5 +1,7 @@
 # backend/app/routers/cases.py
 
+from typing import List
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session, joinedload
 
@@ -49,7 +51,7 @@ async def upload_case(file: UploadFile = File(...), db: Session = Depends(get_db
     return case
 
 
-@router.get("", response_model=list[CaseSchema])
+@router.get("", response_model=List[CaseSchema])
 def list_cases(db: Session = Depends(get_db)):
     cases = (
         db.query(Case)

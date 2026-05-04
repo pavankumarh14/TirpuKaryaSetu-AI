@@ -3,6 +3,7 @@
 import os
 import shutil
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -21,7 +22,7 @@ async def upload_proof(
     case_id: int,
     proof_type: str = Form(...),
     uploaded_by: str = Form(...),
-    action_id: int | None = Form(None),
+    action_id: Optional[int] = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
