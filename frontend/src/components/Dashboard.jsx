@@ -1,6 +1,9 @@
 // frontend/src/components/Dashboard.jsx
+import { useState } from "react";
 
 export default function Dashboard({ stats, reviewQueue, onRefresh }) {
+  const [showAll, setShowAll] = useState(false);
+
   const cards = [
     { label: "Total Cases", value: stats?.total_cases ?? 0 },
     { label: "Pending Cases", value: stats?.pending_cases ?? 0 },
@@ -11,6 +14,8 @@ export default function Dashboard({ stats, reviewQueue, onRefresh }) {
     { label: "Contempt Risk", value: stats?.contempt_risk_count ?? 0 },
     { label: "Review Queue", value: reviewQueue?.length ?? 0 },
   ];
+
+  const visibleQueue = showAll ? reviewQueue : reviewQueue?.slice(0, 5);
 
   return (
     <div>
@@ -25,7 +30,6 @@ export default function Dashboard({ stats, reviewQueue, onRefresh }) {
           Refresh
         </button>
       </div>
-
       <div style={styles.grid}>
         {cards.map((card) => (
           <div key={card.label} style={styles.card}>
@@ -34,23 +38,39 @@ export default function Dashboard({ stats, reviewQueue, onRefresh }) {
           </div>
         ))}
       </div>
-
       <div style={styles.panel}>
-        <h3 style={styles.panelTitle}>Pending Officer Review</h3>
+        <div style={styles.panelHeader}>
+          <h3 style={styles.panelTitle}>Pending Officer Review</h3>
+          {reviewQueue?.length > 0 && (
+            <span style={styles.countBadge}>{reviewQueue.length} actions</span>
+          )}
+        </div>
         {!reviewQueue?.length ? (
           <p style={styles.empty}>No pending actions in the review queue.</p>
         ) : (
-          <ul style={styles.list}>
-            {reviewQueue.slice(0, 5).map((item) => (
-              <li key={item.id} style={styles.listItem}>
-                <div>
-                  <strong>Action #{item.id}</strong>
-                  <div style={styles.meta}>{item.owner_department || "Department pending"}</div>
-                </div>
-                <span style={styles.badge}>{item.status}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul style={styles.list}>
+              {visibleQueue.map((item) => (
+                <li key={item.id} style={styles.listItem}>
+                  <div>
+                    <strong>Action #{item.id}</strong>
+                    <div style={styles.meta}>{item.owner_department || "Department pending"}</div>
+                  </div>
+                  <span style={styles.badge}>{item.status}</span>
+                </li>
+              ))}
+            </ul>
+            {reviewQueue.length > 5 && (
+              <button
+                style={styles.showAllBtn}
+                onClick={() => setShowAll((prev) => !prev)}
+              >
+                {showAll
+                  ? "Show less"
+                  : `Show all ${reviewQueue.length} actions`}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -95,7 +115,21 @@ const styles = {
     padding: "20px",
     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
-  panelTitle: { marginTop: 0 },
+  panelHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "12px",
+  },
+  panelTitle: { margin: 0 },
+  countBadge: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    fontSize: "12px",
+    fontWeight: 600,
+    padding: "2px 8px",
+    borderRadius: "999px",
+  },
   empty: { color: "#64748b" },
   list: { listStyle: "none", padding: 0, margin: 0 },
   listItem: {
@@ -113,5 +147,15 @@ const styles = {
     borderRadius: "999px",
     fontSize: "12px",
     fontWeight: 600,
+  },
+  showAllBtn: {
+    marginTop: "12px",
+    border: "1px solid #cbd5e1",
+    background: "white",
+    color: "#334155",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: 500,
   },
 };

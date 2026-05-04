@@ -1,5 +1,4 @@
 // frontend/src/App.jsx
-
 import { useEffect, useState } from "react";
 import Dashboard from "./components/Dashboard";
 import CaseList from "./components/CaseList";
@@ -53,14 +52,11 @@ export default function App() {
           <button onClick={() => setActiveTab("review")} style={activeTab === "review" ? styles.activeTab : styles.tab}>Review Queue</button>
         </nav>
       </header>
-
       {loading && <p style={styles.info}>Loading data...</p>}
-
       <main style={styles.main}>
         {activeTab === "dashboard" && (
           <Dashboard stats={stats} reviewQueue={reviewQueue} onRefresh={loadAll} />
         )}
-
         {activeTab === "cases" && (
           <div>
             <CaseUpload onUploadSuccess={loadAll} />
@@ -71,11 +67,14 @@ export default function App() {
                 onSelectCase={setSelectedCase}
                 onRefresh={loadAll}
               />
-              <CaseDetail caseItem={selectedCase} onRefresh={loadAll} />
+              <CaseDetail
+                caseItem={selectedCase}
+                onSelectCase={setSelectedCase}
+                onRefresh={loadAll}
+              />
             </div>
           </div>
         )}
-
         {activeTab === "review" && (
           <ReviewPanel queue={reviewQueue} onRefresh={loadAll} />
         )}
