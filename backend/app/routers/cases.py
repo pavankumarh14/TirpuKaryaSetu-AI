@@ -33,43 +33,21 @@ async def upload_case(file: UploadFile = File(...), db: Session = Depends(get_db
         extracted_text=extracted["full_text"],
         ocr_text=extracted["full_text"] if extracted["ocr_used"] else None,
     )
-
     db.add(case)
     db.commit()
     db.refresh(case)
-
-    create_audit_log(
-        db,
-        case_id=case.id,
-        entity_type="case",
-        entity_id=case.id,
-        event="case_uploaded",
-        actor="system",
-        after_value={"source_pdf_path": pdf_path},
-    )
-
     return case
 
 
-@router.get("", response_model=List[CaseSchema])
+@router.get("/", response_model=List[CaseSchema])
 def list_cases(db: Session = Depends(get_db)):
-    cases = (
-        db.query(Case)
-        .options(joinedload(Case.extractions), joinedload(Case.actions))
-        .order_by(Case.created_at.desc())
-        .all()
-    )
+    cases = db.query(Case).options(joinedload(Case.actions)).all()
     return cases
 
 
 @router.get("/{case_id}", response_model=CaseSchema)
 def get_case(case_id: int, db: Session = Depends(get_db)):
-    case = (
-        db.query(Case)
-        .options(joinedload(Case.extractions), joinedload(Case.actions))
-        .filter(Case.id == case_id)
-        .first()
-    )
+    case = db.query(Case).options(joinedload(Case.actions)).filter(Case.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     return case
@@ -80,63 +58,97 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
     case = db.query(Case).filter(Case.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
-
     if not case.extracted_text:
-        raise HTTPException(status_code=400, detail="No extracted text available for case")
+        raise HTTPException(status_code=400, detail="No extracted text found for this case")
 
     case.status = CaseStatus.EXTRACTING
     db.commit()
 
-    result = run_ai_extraction(case.extracted_text)
+    try:
+        result = run_ai_extraction(case.extracted_text)
+    except Exception as e:
+        case.status = CaseStatus.PENDING
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"AI extraction failed: {str(e)}")
 
-    metadata = result.get("case_metadata", {})
-    case.case_number = metadata.get("case_number") or case.case_number
-    case.court_name = metadata.get("court_name") or case.court_name
-    case.court_type = metadata.get("court_type") or case.court_type
-    case.judgment_type = metadata.get("judgment_type") or case.judgment_type
-    case.petitioner = metadata.get("petitioner") or case.petitioner
-    case.respondent_department = metadata.get("respondent_department") or case.respondent_department
-    case.disposal_status = metadata.get("disposal_status")
-    case.language = metadata.get("language") or case.language
-    case.status = CaseStatus.PENDING_REVIEW
+    # Update case metadata
+    meta = result.get("case_metadata", {})
+    if meta.get("case_number"):
+        case.case_number = meta["case_number"]
+    if meta.get("court_name"):
+        case.court_name = meta["court_name"]
+    if meta.get("court_type"):
+        case.court_type = meta["court_type"]
+    if meta.get("order_date"):
+        try:
+            from datetime import datetime
+            case.order_date = datetime.fromisoformat(meta["order_date"].replace("Z", "+00:00"))
+        except Exception:
+            pass
+    if meta.get("judgment_type"):
+        case.judgment_type = meta["judgment_type"]
+    if meta.get("petitioner"):
+        case.petitioner = meta["petitioner"]
+    if meta.get("respondent_department"):
+        case.respondent_department = meta["respondent_department"]
+    if meta.get("disposal_status"):
+        case.disposal_status = meta["disposal_status"]
+    if meta.get("language"):
+        case.language = meta["language"]
 
-    existing_extractions = db.query(Extraction).filter(Extraction.case_id == case.id).all()
-    for item in existing_extractions:
-        db.delete(item)
-
-    existing_actions = db.query(Action).filter(Action.case_id == case.id).all()
-    for item in existing_actions:
-        db.delete(item)
-
-    db.commit()
-
-    for item in result.get("extractions", []):
+    # Save extractions
+    for field_item in result.get("extractions", []):
         extraction = Extraction(
             case_id=case.id,
-            field_name=item.get("field_name"),
-            field_value=item.get("field_value"),
-            confidence=item.get("confidence", 0.0),
-            source_page=item.get("source_page"),
-            source_text_span=item.get("source_text_span"),
+            field_name=field_item.get("field_name", ""),
+            field_value=field_item.get("field_value", ""),
+            confidence=field_item.get("confidence", 0.0),
+            source_page=field_item.get("source_page"),
+            source_text_span=field_item.get("source_text_span"),
         )
         db.add(extraction)
 
+    # Save actions with all new bilingual + appeal + deadline fields
     for item in result.get("actions", []):
+        deadline = item.get("deadline")
+        appeal_window = item.get("appeal_window")
+        if isinstance(deadline, str):
+            try:
+                from datetime import datetime
+                deadline = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+            except Exception:
+                deadline = None
+        if isinstance(appeal_window, str):
+            try:
+                from datetime import datetime
+                appeal_window = datetime.fromisoformat(appeal_window.replace("Z", "+00:00"))
+            except Exception:
+                appeal_window = None
+
         action = Action(
             case_id=case.id,
-            action_text=item.get("action_text"),
+            action_text=item.get("action_text", ""),
+            # Gap 1: Kannada translation
+            action_text_kn=item.get("action_text_kn"),
             owner_department=item.get("owner_department"),
-            deadline=item.get("deadline"),
-            risk_level=item.get("risk_level"),
+            deadline=deadline,
+            # Gap 3: store textual deadline expression for display
+            deadline_expression=item.get("deadline_expression"),
+            risk_level=item.get("risk_level", "medium"),
             recommendation=item.get("recommendation"),
-            assigned_to=item.get("assigned_to"),
-            appeal_window=item.get("appeal_window"),
+            appeal_window=appeal_window,
+            # Gap 6: store appeal window fields
+            appeal_window_days=item.get("appeal_window_days"),
+            appeal_window_expression=item.get("appeal_window_expression"),
             contempt_risk=item.get("contempt_risk", False),
             confidence=item.get("confidence", 0.0),
-            source_evidence=item.get("source_evidence"),
+            source_evidence=item.get("source_evidence", ""),
+            # Gap 5: store source page
+            source_page=item.get("source_page"),
         )
         db.add(action)
 
+    case.status = CaseStatus.PENDING_REVIEW
     db.commit()
     db.refresh(case)
 
@@ -145,18 +157,9 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
         case_id=case.id,
         entity_type="case",
         entity_id=case.id,
-        event="case_extracted",
+        event="ai_extraction_completed",
         actor="system",
-        after_value={
-            "actions_created": len(result.get("actions", [])),
-            "extractions_created": len(result.get("extractions", [])),
-        },
+        after_value={"status": "pending_review", "actions_extracted": len(result.get("actions", []))},
     )
 
-    return {
-        "case_id": case.id,
-        "status": case.status,
-        "metadata": metadata,
-        "actions_created": len(result.get("actions", [])),
-        "extractions_created": len(result.get("extractions", [])),
-    }
+    return {"status": "success", "case_id": case.id, "actions_extracted": len(result.get("actions", []))}

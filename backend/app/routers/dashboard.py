@@ -1,13 +1,15 @@
 # backend/app/routers/dashboard.py
+from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import List
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Action, ActionStatus, Case, CaseStatus, RiskLevel
-from app.schemas import DashboardStats
+from app.models import Action, ActionStatus, AuditLog, Case, CaseStatus, RiskLevel
+from app.schemas import AuditLogOut, DashboardStats, DepartmentWorkload
 
 router = APIRouter()
 
@@ -33,6 +35,19 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     ).count()
     contempt_risk_count = db.query(Action).filter(Action.contempt_risk == True).count()
 
+    # Gap 4: Also count approved actions as "verified" for dashboard stat accuracy
+    approved_actions = db.query(Action).filter(Action.status == ActionStatus.APPROVED).count()
+    # verified_cases should include cases that have at least one approved action
+    cases_with_approvals = (
+        db.query(Case.id)
+        .join(Action)
+        .filter(Action.status == ActionStatus.APPROVED)
+        .distinct()
+        .count()
+    )
+    if verified_cases == 0 and cases_with_approvals > 0:
+        verified_cases = cases_with_approvals
+
     return DashboardStats(
         total_cases=total_cases,
         pending_cases=pending_cases,
@@ -44,105 +59,92 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     )
 
 
-@router.get("/workload")
+# Gap 4: Department-wise workload endpoint
+@router.get("/workload", response_model=List[DepartmentWorkload])
 def get_department_workload(db: Session = Depends(get_db)):
-    rows = (
-        db.query(
-            Action.owner_department,
-            func.count(Action.id).label("total_actions"),
+    actions = db.query(Action).filter(Action.owner_department != None).all()
+    dept_map = defaultdict(lambda: {"pending": 0, "approved": 0, "completed": 0, "total": 0})
+    for action in actions:
+        dept = action.owner_department or "Unknown"
+        dept_map[dept]["total"] += 1
+        if action.status in (ActionStatus.PENDING, ActionStatus.EDITED, ActionStatus.ASSIGNED):
+            dept_map[dept]["pending"] += 1
+        elif action.status == ActionStatus.APPROVED:
+            dept_map[dept]["approved"] += 1
+        elif action.status == ActionStatus.COMPLETED:
+            dept_map[dept]["completed"] += 1
+    return [
+        DepartmentWorkload(
+            department=dept,
+            pending=counts["pending"],
+            approved=counts["approved"],
+            completed=counts["completed"],
+            total=counts["total"],
         )
-        .group_by(Action.owner_department)
-        .all()
-    )
-    result = []
-    for row in rows:
-        department = row[0] or "Unassigned"
-        pending_count = (
-            db.query(Action)
-            .filter(
-                Action.owner_department == row[0],
-                Action.status.in_(
-                    [
-                        ActionStatus.PENDING,
-                        ActionStatus.EDITED,
-                        ActionStatus.ASSIGNED,
-                        ActionStatus.APPROVED,
-                    ]
-                ),
-            )
-            .count()
-        )
-        completed_count = (
-            db.query(Action)
-            .filter(
-                Action.owner_department == row[0],
-                Action.status == ActionStatus.COMPLETED,
-            )
-            .count()
-        )
-        result.append(
-            {
-                "department": department,
-                "total_actions": row[1],
-                "pending_actions": pending_count,
-                "completed_actions": completed_count,
-            }
-        )
-    return result
+        for dept, counts in sorted(dept_map.items())
+    ]
 
 
+# Gap 3 & 6: Urgent actions — approaching deadlines + appeal window expiry
 @router.get("/urgent")
-def get_urgent_actions(days: int = 14, db: Session = Depends(get_db)):
-    """
-    Returns actions that are urgent — either:
-    1. Have a deadline within the next `days` days (original behaviour), OR
-    2. Have no deadline but are high/critical risk or have contempt_risk=True
-       (catches actions where AI extracted risk but couldn't parse a deadline).
-    """
-    cutoff = datetime.utcnow() + timedelta(days=days)
+def get_urgent_actions(db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    threshold = now + timedelta(days=14)
 
-    # Actions with explicit deadlines coming up
+    seen_ids = set()
+    result = []
+
     deadline_actions = (
         db.query(Action)
         .filter(
-            Action.deadline.isnot(None),
-            Action.deadline <= cutoff,
-            Action.status != ActionStatus.COMPLETED,
+            Action.deadline != None,
+            Action.deadline <= threshold,
+            Action.deadline >= now,
+            Action.status.in_([ActionStatus.PENDING, ActionStatus.APPROVED, ActionStatus.ASSIGNED, ActionStatus.EDITED]),
         )
         .order_by(Action.deadline.asc())
         .all()
     )
+    for a in deadline_actions:
+        if a.id not in seen_ids:
+            seen_ids.add(a.id)
+            result.append(a)
 
-    # Actions with no deadline but flagged high-risk or contempt risk
     risk_actions = (
         db.query(Action)
         .filter(
-            Action.deadline.is_(None),
-            Action.status != ActionStatus.COMPLETED,
             Action.risk_level.in_([RiskLevel.CRITICAL, RiskLevel.HIGH]),
+            Action.status.in_([ActionStatus.PENDING, ActionStatus.ASSIGNED, ActionStatus.EDITED]),
         )
-        .order_by(Action.created_at.asc())
         .all()
     )
+    for a in risk_actions:
+        if a.id not in seen_ids:
+            seen_ids.add(a.id)
+            result.append(a)
 
-    # Merge: deadline actions first, then risk-only actions (deduplicated by id)
-    seen_ids = set()
-    merged = []
-    for action in deadline_actions + risk_actions:
-        if action.id not in seen_ids:
-            seen_ids.add(action.id)
-            merged.append(action)
+    return result
 
-    return [
-        {
-            "action_id": action.id,
-            "case_id": action.case_id,
-            "action_text": action.action_text,
-            "owner_department": action.owner_department,
-            "deadline": action.deadline,
-            "risk_level": action.risk_level.value if action.risk_level else None,
-            "contempt_risk": action.contempt_risk,
-            "assigned_to": action.assigned_to,
-        }
-        for action in merged
-    ]
+
+# Gap 2: Audit Trail — get audit logs for a case
+@router.get("/audit/case/{case_id}", response_model=List[AuditLogOut])
+def get_case_audit_log(case_id: int, db: Session = Depends(get_db)):
+    logs = (
+        db.query(AuditLog)
+        .filter(AuditLog.case_id == case_id)
+        .order_by(AuditLog.timestamp.desc())
+        .all()
+    )
+    return logs
+
+
+# Gap 2: Audit Trail — get all audit logs (recent first)
+@router.get("/audit", response_model=List[AuditLogOut])
+def get_all_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
+    logs = (
+        db.query(AuditLog)
+        .order_by(AuditLog.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    return logs

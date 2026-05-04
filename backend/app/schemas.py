@@ -31,33 +31,24 @@ class Extraction(ExtractionBase):
 
 class ActionBase(BaseModel):
     action_text: str
+    action_text_kn: Optional[str] = None           # Gap 1: Kannada translation
     owner_department: Optional[str] = None
     deadline: Optional[datetime] = None
+    deadline_expression: Optional[str] = None      # raw textual deadline phrase
     risk_level: RiskLevel = RiskLevel.MEDIUM
     recommendation: Optional[str] = None
     assigned_to: Optional[str] = None
     appeal_window: Optional[datetime] = None
+    appeal_window_days: Optional[int] = None       # Gap 6: numerical countdown days
+    appeal_window_expression: Optional[str] = None # raw textual appeal phrase
     contempt_risk: bool = False
     confidence: float
     source_evidence: str
+    source_page: Optional[int] = None             # Gap 5: page reference
 
 
 class ActionCreate(ActionBase):
     case_id: int
-
-
-class ActionUpdate(BaseModel):
-    action_text: Optional[str] = None
-    owner_department: Optional[str] = None
-    deadline: Optional[datetime] = None
-    risk_level: Optional[RiskLevel] = None
-    recommendation: Optional[str] = None
-    status: Optional[ActionStatus] = None
-    assigned_to: Optional[str] = None
-    appeal_window: Optional[datetime] = None
-    contempt_risk: Optional[bool] = None
-    confidence: Optional[float] = None
-    source_evidence: Optional[str] = None
 
 
 class Action(ActionBase):
@@ -71,16 +62,21 @@ class Action(ActionBase):
         from_attributes = True
 
 
-class ReviewCreate(BaseModel):
-    reviewer_name: str
-    reviewer_role: str
+class ReviewBase(BaseModel):
+    reviewer_name: Optional[str] = None
+    reviewer_role: Optional[str] = None
     review_action: ReviewAction
     edited_fields: Optional[str] = None
     notes: Optional[str] = None
 
 
-class Review(ReviewCreate):
+class ReviewCreate(ReviewBase):
+    pass
+
+
+class Review(ReviewBase):
     id: int
+    case_id: int
     action_id: int
     created_at: datetime
 
@@ -88,52 +84,46 @@ class Review(ReviewCreate):
         from_attributes = True
 
 
-class ProofCreate(BaseModel):
-    proof_type: str
-    uploaded_by: str
-    action_id: Optional[int] = None
-
-
-class Proof(ProofCreate):
+# Gap 2: Audit Trail schema
+class AuditLogOut(BaseModel):
     id: int
-    case_id: int
-    file_path: str
-    verified: bool
-    verified_by: Optional[str] = None
-    uploaded_at: datetime
+    case_id: Optional[int] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    event: str
+    before_value: Optional[str] = None
+    after_value: Optional[str] = None
+    actor: Optional[str] = None
+    ip_address: Optional[str] = None
+    timestamp: datetime
 
     class Config:
         from_attributes = True
 
 
 class CaseBase(BaseModel):
-    case_number: str
-    court_name: str
-    court_type: str
-    judgment_type: str
-    petitioner: str
-    respondent_department: str
-    language: str = "en"
+    case_number: Optional[str] = None
+    court_name: Optional[str] = None
+    court_type: Optional[str] = None
+    order_date: Optional[datetime] = None
+    judgment_type: Optional[str] = None
+    petitioner: Optional[str] = None
+    respondent_department: Optional[str] = None
+    disposal_status: Optional[str] = None
+    language: Optional[str] = "en"
+    status: Optional[CaseStatus] = CaseStatus.PENDING
+    source_pdf_path: Optional[str] = None
 
 
 class CaseCreate(CaseBase):
-    disposal_status: Optional[str] = None
-    order_date: Optional[datetime] = None
+    pass
 
 
 class Case(CaseBase):
     id: int
-    status: CaseStatus
-    source_pdf_path: Optional[str] = None
-    extracted_text: Optional[str] = None
-    ocr_text: Optional[str] = None
-    disposal_status: Optional[str] = None
-    order_date: Optional[datetime] = None
-    received_date: datetime
+    actions: List[Action] = []
     created_at: datetime
     updated_at: Optional[datetime] = None
-    extractions: List[Extraction] = Field(default_factory=list)
-    actions: List[Action] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -149,16 +139,10 @@ class DashboardStats(BaseModel):
     contempt_risk_count: int
 
 
+# Gap 4: Department workload schema
 class DepartmentWorkload(BaseModel):
     department: str
-    total_actions: int
-    pending_actions: int
-    completed_actions: int
-
-
-class AIExtractResponse(BaseModel):
-    case_id: int
-    status: str
-    metadata: Dict[str, Any]
-    actions_created: int
-    extractions_created: int
+    pending: int
+    approved: int
+    completed: int
+    total: int
