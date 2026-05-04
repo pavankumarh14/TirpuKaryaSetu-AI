@@ -1,8 +1,22 @@
 // frontend/src/components/Dashboard.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getDepartmentWorkload } from "../services/api";
+import en from "../locales/en.json";
+import kn from "../locales/kn.json";
 
-export default function Dashboard({ stats, reviewQueue, onRefresh }) {
+// Gap 1: Bilingual support — language toggle between English and Kannada
+export default function Dashboard({ stats, reviewQueue, onRefresh, lang = "en" }) {
   const [showAll, setShowAll] = useState(false);
+  const [workload, setWorkload] = useState([]);
+  const [workloadError, setWorkloadError] = useState(null);
+  const t = lang === "kn" ? kn : en;
+
+  // Gap 4: Load department workload from API
+  useEffect(() => {
+    getDepartmentWorkload()
+      .then((data) => setWorkload(Array.isArray(data) ? data : data?.workload || []))
+      .catch(() => setWorkloadError("Could not load department workload"));
+  }, []);
 
   const cards = [
     { label: "Total Cases", value: stats?.total_cases ?? 0 },
@@ -21,7 +35,7 @@ export default function Dashboard({ stats, reviewQueue, onRefresh }) {
     <div>
       <div style={styles.topBar}>
         <div>
-          <h2 style={styles.heading}>Operational Dashboard</h2>
+          <h2 style={styles.heading}>{t.dashboard || "Operational Dashboard"}</h2>
           <p style={styles.subtext}>
             Verified and review-ready workflow view for court judgment compliance
           </p>
@@ -30,6 +44,7 @@ export default function Dashboard({ stats, reviewQueue, onRefresh }) {
           Refresh
         </button>
       </div>
+
       <div style={styles.grid}>
         {cards.map((card) => (
           <div key={card.label} style={styles.card}>
@@ -38,13 +53,43 @@ export default function Dashboard({ stats, reviewQueue, onRefresh }) {
           </div>
         ))}
       </div>
+
+      {/* Gap 4: Department Workload Panel */}
       <div style={styles.panel}>
         <div style={styles.panelHeader}>
-          <h3 style={styles.panelTitle}>Pending Officer Review</h3>
+          <h3 style={styles.panelTitle}>Department Workload</h3>
+        </div>
+        {workloadError ? (
+          <p style={styles.errorText}>{workloadError}</p>
+        ) : workload.length === 0 ? (
+          <p style={styles.empty}>No workload data available.</p>
+        ) : (
+          <ul style={styles.list}>
+            {workload.map((dept, idx) => (
+              <li key={idx} style={styles.workloadItem}>
+                <div style={styles.deptName}>{dept.department || dept.owner_department || "Unknown"}</div>
+                <div style={styles.deptMeta}>
+                  <span style={styles.deptBadge}>{dept.pending_actions ?? dept.count ?? 0} pending</span>
+                  {dept.high_risk > 0 && (
+                    <span style={{ ...styles.deptBadge, background: "#fee2e2", color: "#b91c1c" }}>
+                      {dept.high_risk} high risk
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div style={{ ...styles.panel, marginTop: "16px" }}>
+        <div style={styles.panelHeader}>
+          <h3 style={styles.panelTitle}>{t.review_queue || "Pending Officer Review"}</h3>
           {reviewQueue?.length > 0 && (
             <span style={styles.countBadge}>{reviewQueue.length} actions</span>
           )}
         </div>
+
         {!reviewQueue?.length ? (
           <p style={styles.empty}>No pending actions in the review queue.</p>
         ) : (
@@ -131,6 +176,7 @@ const styles = {
     borderRadius: "999px",
   },
   empty: { color: "#64748b" },
+  errorText: { color: "#b91c1c", fontSize: "13px" },
   list: { listStyle: "none", padding: 0, margin: 0 },
   listItem: {
     display: "flex",
@@ -138,6 +184,23 @@ const styles = {
     alignItems: "center",
     borderBottom: "1px solid #e2e8f0",
     padding: "12px 0",
+  },
+  workloadItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottom: "1px solid #e2e8f0",
+    padding: "10px 0",
+  },
+  deptName: { fontWeight: 600, fontSize: "14px" },
+  deptMeta: { display: "flex", gap: "8px" },
+  deptBadge: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    fontSize: "12px",
+    fontWeight: 600,
+    padding: "2px 8px",
+    borderRadius: "999px",
   },
   meta: { fontSize: "13px", color: "#64748b", marginTop: "4px" },
   badge: {
