@@ -11,6 +11,10 @@ Do not add markdown.
 Do not add explanations outside JSON.
 Do not invent facts.
 
+IMPORTANT: For every action, you MUST provide both:
+- action_text: the action in English
+- action_text_kn: the SAME action translated into Kannada (ಕನ್ನಡ). Always provide this field. Never leave it null.
+
 Output schema:
 {
   "case_metadata": {
@@ -35,23 +39,19 @@ Output schema:
   ],
   "actions": [
     {
-      "action_text": "clear government action to be performed",
+      "action_text": "clear government action to be performed (English)",
+      "action_text_kn": "same action translated into Kannada script",
       "owner_department": "string or null",
       "deadline_expression": "textual deadline phrase from judgment or null",
       "risk_level": "low|medium|high|critical",
       "recommendation": "short officer-facing recommendation",
-      "appeal_window_expression": "textual phrase or null",
+      "appeal_window_expression": "textual phrase describing appeal window or null",
+      "appeal_window_days": null,
       "contempt_risk": false,
-      "confidence": 0.0,
-      "source_evidence": "exact supporting sentence or text span"
+      "confidence": 0.95,
+      "source_evidence": "exact supporting sentence or text span",
+      "source_page": 1
     }
   ]
 }
-
-Rules:
-- Every action must be traceable to source text.
-- If no reliable value is found, use null.
-- Prefer multiple precise actions over one vague action.
-- Keep extracted values concise and normalized.
-- If the judgment contains Kannada, still return structured field values in English where possible.
 """
