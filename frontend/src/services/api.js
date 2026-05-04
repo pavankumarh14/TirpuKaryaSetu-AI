@@ -37,6 +37,25 @@ export async function getDashboardStats() {
   return request("/dashboard/stats");
 }
 
+// Gap 4: Department workload
+export async function getDepartmentWorkload() {
+  return request("/dashboard/workload");
+}
+
+// Gap 3 & 6: Urgent actions with deadline + appeal window
+export async function getUrgentActions() {
+  return request("/dashboard/urgent");
+}
+
+// Gap 2: Audit trail
+export async function getCaseAuditLog(caseId) {
+  return request(`/dashboard/audit/case/${caseId}`);
+}
+
+export async function getAllAuditLogs(limit = 50) {
+  return request(`/dashboard/audit?limit=${limit}`);
+}
+
 export async function getReviewQueue() {
   return request("/review/queue");
 }
@@ -54,16 +73,8 @@ export async function completeAction(actionId) {
   });
 }
 
-export async function uploadProof(caseId, file, proofType, uploadedBy, actionId = null) {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("proof_type", proofType);
-  formData.append("uploaded_by", uploadedBy);
-  if (actionId !== null && actionId !== undefined) {
-    formData.append("action_id", actionId);
-  }
-
-  return request(`/proofs/upload?case_id=${caseId}`, {
+export async function uploadProof(caseId, formData) {
+  return request(`/proofs/upload/${caseId}`, {
     method: "POST",
     body: formData,
   });
