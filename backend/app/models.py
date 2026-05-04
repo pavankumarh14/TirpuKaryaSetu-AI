@@ -155,3 +155,5 @@ class AuditLog(Base):
     actor = Column(String(200))
     ip_address = Column(String(45))
     timestamp = Column(DateTime, server_default=func.now())
+
+    case = relationship("Case", back_populates="audit_logs")
