@@ -6,6 +6,8 @@ import CaseDetail from "./components/CaseDetail";
 import CaseUpload from "./components/CaseUpload";
 import ReviewPanel from "./components/ReviewPanel";
 import { getCases, getDashboardStats, getReviewQueue } from "./services/api";
+import en from "./locales/en.json";
+import kn from "./locales/kn.json";
 
 export default function App() {
   const [cases, setCases] = useState([]);
@@ -14,6 +16,9 @@ export default function App() {
   const [reviewQueue, setReviewQueue] = useState([]);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(false);
+  // Gap 1: Language toggle state
+  const [lang, setLang] = useState("en");
+  const t = lang === "kn" ? kn : en;
 
   const loadAll = async () => {
     setLoading(true);
@@ -37,46 +42,101 @@ export default function App() {
     loadAll();
   }, []);
 
+  const tabs = [
+    { id: "dashboard", label: t.dashboard || "Dashboard" },
+    { id: "cases", label: t.cases || "Cases" },
+    { id: "review", label: t.review_queue || "Review Queue" },
+    { id: "upload", label: t.upload_proof || "Upload" },
+  ];
+
   return (
     <div style={styles.app}>
+      {/* Top Nav */}
       <header style={styles.header}>
-        <div>
-          <h1 style={styles.title}>TirpuKaryaSetu AI</h1>
-          <p style={styles.subtitle}>
-            From Court Judgments to Verified Government Actions
-          </p>
+        <div style={styles.brand}>
+          <span style={styles.brandName}>{t.app_name || "TirpuKaryaSetu AI"}</span>
+          <span style={styles.tagline}>{t.tagline || ""}</span>
         </div>
-        <nav style={styles.nav}>
-          <button onClick={() => setActiveTab("dashboard")} style={activeTab === "dashboard" ? styles.activeTab : styles.tab}>Dashboard</button>
-          <button onClick={() => setActiveTab("cases")} style={activeTab === "cases" ? styles.activeTab : styles.tab}>Cases</button>
-          <button onClick={() => setActiveTab("review")} style={activeTab === "review" ? styles.activeTab : styles.tab}>Review Queue</button>
-        </nav>
+        <div style={styles.navRight}>
+          {/* Gap 1: Language switcher */}
+          <button
+            style={{
+              ...styles.langBtn,
+              background: lang === "en" ? "#2563eb" : "white",
+              color: lang === "en" ? "white" : "#334155",
+            }}
+            onClick={() => setLang("en")}
+          >
+            EN
+          </button>
+          <button
+            style={{
+              ...styles.langBtn,
+              background: lang === "kn" ? "#2563eb" : "white",
+              color: lang === "kn" ? "white" : "#334155",
+            }}
+            onClick={() => setLang("kn")}
+          >
+            ಕಂ
+          </button>
+        </div>
       </header>
-      {loading && <p style={styles.info}>Loading data...</p>}
+
+      {/* Tab Bar */}
+      <nav style={styles.nav}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            style={{
+              ...styles.tab,
+              ...(activeTab === tab.id ? styles.activeTab : {}),
+            }}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {/* Main Content */}
       <main style={styles.main}>
-        {activeTab === "dashboard" && (
-          <Dashboard stats={stats} reviewQueue={reviewQueue} onRefresh={loadAll} />
-        )}
-        {activeTab === "cases" && (
-          <div>
-            <CaseUpload onUploadSuccess={loadAll} />
-            <div style={styles.twoCol}>
-              <CaseList
-                cases={cases}
-                selectedCase={selectedCase}
-                onSelectCase={setSelectedCase}
+        {loading ? (
+          <div style={styles.loading}>Loading...</div>
+        ) : (
+          <>
+            {activeTab === "dashboard" && (
+              <Dashboard
+                stats={stats}
+                reviewQueue={reviewQueue}
                 onRefresh={loadAll}
+                lang={lang}
               />
-              <CaseDetail
-                caseItem={selectedCase}
-                onSelectCase={setSelectedCase}
-                onRefresh={loadAll}
-              />
-            </div>
-          </div>
-        )}
-        {activeTab === "review" && (
-          <ReviewPanel queue={reviewQueue} onRefresh={loadAll} />
+            )}
+            {activeTab === "cases" && (
+              <div style={styles.caseLayout}>
+                <div style={styles.caseLeft}>
+                  <CaseList
+                    cases={cases}
+                    selectedCase={selectedCase}
+                    onSelectCase={setSelectedCase}
+                  />
+                </div>
+                <div style={styles.caseRight}>
+                  <CaseDetail
+                    caseItem={selectedCase}
+                    onSelectCase={setSelectedCase}
+                    onRefresh={loadAll}
+                  />
+                </div>
+              </div>
+            )}
+            {activeTab === "review" && (
+              <ReviewPanel onRefresh={loadAll} />
+            )}
+            {activeTab === "upload" && (
+              <CaseUpload onUploaded={loadAll} />
+            )}
+          </>
         )}
       </main>
     </div>
@@ -85,62 +145,59 @@ export default function App() {
 
 const styles = {
   app: {
-    fontFamily: "Inter, system-ui, sans-serif",
-    background: "#f7f8fa",
     minHeight: "100vh",
-    color: "#1c1f26",
+    background: "#f1f5f9",
+    fontFamily: "system-ui, sans-serif",
   },
   header: {
-    padding: "20px 28px",
-    background: "#0f172a",
+    background: "#1e293b",
     color: "white",
+    padding: "12px 24px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: "16px",
   },
-  title: {
-    margin: 0,
-    fontSize: "28px",
-  },
-  subtitle: {
-    margin: "6px 0 0",
-    fontSize: "14px",
-    color: "#cbd5e1",
+  brand: { display: "flex", flexDirection: "column" },
+  brandName: { fontWeight: 700, fontSize: "18px" },
+  tagline: { fontSize: "12px", color: "#94a3b8", marginTop: "2px" },
+  navRight: { display: "flex", gap: "6px", alignItems: "center" },
+  langBtn: {
+    border: "1px solid #475569",
+    padding: "6px 12px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: "13px",
   },
   nav: {
+    background: "white",
+    borderBottom: "1px solid #e2e8f0",
+    padding: "0 24px",
     display: "flex",
-    gap: "12px",
+    gap: "4px",
   },
   tab: {
+    background: "none",
     border: "none",
-    padding: "10px 14px",
-    borderRadius: "8px",
-    background: "#1e293b",
-    color: "#e2e8f0",
+    borderBottom: "3px solid transparent",
+    padding: "14px 18px",
     cursor: "pointer",
+    fontWeight: 500,
+    color: "#64748b",
+    fontSize: "14px",
   },
   activeTab: {
-    border: "none",
-    padding: "10px 14px",
-    borderRadius: "8px",
-    background: "#22c55e",
-    color: "#052e16",
-    cursor: "pointer",
+    borderBottomColor: "#2563eb",
+    color: "#1d4ed8",
     fontWeight: 700,
   },
-  main: {
-    padding: "24px 28px",
-  },
-  twoCol: {
+  main: { padding: "24px" },
+  loading: { textAlign: "center", padding: "60px", color: "#64748b" },
+  caseLayout: {
     display: "grid",
-    gridTemplateColumns: "1fr 1.4fr",
+    gridTemplateColumns: "320px 1fr",
     gap: "20px",
   },
-  info: {
-    padding: "12px 28px",
-    margin: 0,
-    color: "#334155",
-  },
+  caseLeft: {},
+  caseRight: {},
 };
