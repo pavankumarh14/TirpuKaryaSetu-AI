@@ -69,10 +69,18 @@ export default function Dashboard({ stats, reviewQueue, onRefresh, lang = "en" }
               <li key={idx} style={styles.workloadItem}>
                 <div style={styles.deptName}>{dept.department || dept.owner_department || "Unknown"}</div>
                 <div style={styles.deptMeta}>
-                  <span style={styles.deptBadge}>{dept.pending_actions ?? dept.count ?? 0} pending</span>
-                  {dept.high_risk > 0 && (
-                    <span style={{ ...styles.deptBadge, background: "#fee2e2", color: "#b91c1c" }}>
-                      {dept.high_risk} high risk
+                  <span style={styles.deptBadge}>
+                    {/* Fix: API returns 'pending' not 'pending_actions' */}
+                    {dept.pending ?? dept.pending_actions ?? dept.count ?? 0} pending
+                  </span>
+                  {(dept.high_risk > 0 || dept.approved > 0) && (
+                    <span style={{ ...styles.deptBadge, background: "#dcfce7", color: "#166534" }}>
+                      {dept.approved ?? 0} approved
+                    </span>
+                  )}
+                  {dept.completed > 0 && (
+                    <span style={{ ...styles.deptBadge, background: "#f0fdf4", color: "#15803d" }}>
+                      {dept.completed} done
                     </span>
                   )}
                 </div>
