@@ -3,14 +3,18 @@ import { useState, useEffect } from "react";
 import { triggerExtraction, getCase, getCaseAuditLog } from "../services/api";
 import ActionCard from "./ActionCard";
 import ProofUpload from "./ProofUpload";
+import en from "../locales/en.json";
+import kn from "../locales/kn.json";
 
-export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
+// Fix: Complete bilingual support with lang prop
+export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "en" }) {
   const [busy, setBusy] = useState(false);
   const [extractError, setExtractError] = useState(null);
-  // Gap 2: Audit trail state
   const [auditLog, setAuditLog] = useState([]);
   const [showAudit, setShowAudit] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
+  
+  const t = lang === "kn" ? kn : en;
 
   const handleExtract = async () => {
     if (!caseItem?.id) return;
@@ -29,7 +33,6 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
     }
   };
 
-  // Gap 2: Load audit log when toggled on
   const handleToggleAudit = async () => {
     if (!showAudit && auditLog.length === 0 && caseItem?.id) {
       setAuditLoading(true);
@@ -54,8 +57,8 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
   if (!caseItem) {
     return (
       <div style={styles.panel}>
-        <h2 style={styles.heading}>Case Detail</h2>
-        <p style={styles.empty}>Select a case from the left to view details.</p>
+        <h2 style={styles.heading}>{t.case_detail}</h2>
+        <p style={styles.empty}>{t.select_case_hint}</p>
       </div>
     );
   }
@@ -63,7 +66,7 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
   const hasActions = caseItem.actions?.length > 0;
   const hasCompleted = caseItem.actions?.some((a) => a.status === "completed");
 
-  // Gap 6: Determine appeal window for contempt-risk actions
+  // Appeal window for contempt-risk actions
   const contemptActions = caseItem.actions?.filter(
     (a) => a.contempt_risk && a.status !== "completed"
   ) || [];
@@ -72,15 +75,15 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
     <div style={styles.panel}>
       <div style={styles.header}>
         <div>
-          <h2 style={styles.heading}>Case Detail</h2>
-          <p style={styles.subtext}>Officer-facing judgment workflow detail</p>
+          <h2 style={styles.heading}>{t.case_detail}</h2>
+          <p style={styles.subtext}>{t.case_detail_subtext}</p>
         </div>
         <div style={styles.headerBtns}>
           <button
             style={styles.auditBtn}
             onClick={handleToggleAudit}
           >
-            {showAudit ? "Hide Audit Trail" : "View Audit Trail"}
+            {showAudit ? t.hide_audit_trail : t.view_audit_trail}
           </button>
           <button
             style={{
@@ -91,31 +94,30 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
             onClick={handleExtract}
             disabled={busy}
           >
-            {busy ? "Extracting..." : "Run AI Extraction"}
+            {busy ? t.extracting : t.run_extraction}
           </button>
         </div>
       </div>
 
       {extractError && (
         <div style={styles.errorBanner}>
-          <strong>Extraction Error:</strong> {extractError}
+          <strong>{t.extraction_error}</strong> {extractError}
           <button style={styles.retryBtn} onClick={handleExtract} disabled={busy}>
-            Retry
+            {t.retry}
           </button>
         </div>
       )}
 
-      {/* Gap 6: Appeal Window Alert for contempt-risk actions */}
+      {/* Appeal Window Alert for contempt-risk actions */}
       {contemptActions.length > 0 && (
         <div style={styles.appealBanner}>
-          <strong>Appeal Window Active:</strong> {contemptActions.length} action(s) flagged for contempt risk.
-          Immediate compliance required to avoid court proceedings.
+          <strong>{t.appeal_window_active}</strong> {t.appeal_window_text.replace("{count}", contemptActions.length)}
           <ul style={styles.appealList}>
             {contemptActions.map((a) => (
               <li key={a.id}>
-                Action #{a.id} — {a.action_text?.slice(0, 60) || "No description"}
+                {t.action_text.replace("{id}", a.id).replace("{text}", a.action_text?.slice(0, 60) || t.no_source_evidence)}
                 {a.deadline && (
-                  <span style={styles.deadlineTag}> Deadline: {a.deadline}</span>
+                  <span style={styles.deadlineTag}> {t.deadline}: {a.deadline}</span>
                 )}
               </li>
             ))}
@@ -123,25 +125,26 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
         </div>
       )}
 
+      {/* Fix: Translated info labels */}
       <div style={styles.metaGrid}>
-        <Info label="Case Number" value={caseItem.case_number} />
-        <Info label="Court Name" value={caseItem.court_name} />
-        <Info label="Court Type" value={caseItem.court_type} />
-        <Info label="Judgment Type" value={caseItem.judgment_type} />
-        <Info label="Petitioner" value={caseItem.petitioner} />
-        <Info label="Department" value={caseItem.respondent_department} />
-        <Info label="Language" value={caseItem.language} />
-        <Info label="Status" value={caseItem.status} />
+        <Info label={t.case_number} value={caseItem.case_number} />
+        <Info label={t.court_name} value={caseItem.court_name} />
+        <Info label={t.court_type} value={caseItem.court_type} />
+        <Info label={t.judgment_type} value={caseItem.judgment_type} />
+        <Info label={t.petitioner} value={caseItem.petitioner} />
+        <Info label={t.department} value={caseItem.respondent_department} />
+        <Info label={t.language} value={caseItem.language} />
+        <Info label={t.status} value={t.lowercase?.[caseItem.status] || caseItem.status} />
       </div>
 
-      {/* Gap 2: Audit Trail Panel */}
+      {/* Audit Trail Panel */}
       {showAudit && (
         <section style={styles.section}>
-          <h3>Audit Trail</h3>
+          <h3>{t.audit_trail}</h3>
           {auditLoading ? (
-            <p style={styles.empty}>Loading audit log...</p>
+            <p style={styles.empty}>{t.loading_audit}</p>
           ) : auditLog.length === 0 ? (
-            <p style={styles.empty}>No audit entries found for this case.</p>
+            <p style={styles.empty}>{t.no_audit_entries}</p>
           ) : (
             <ul style={styles.auditList}>
               {auditLog.map((entry, idx) => (
@@ -168,15 +171,16 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
       )}
 
       <section style={styles.section}>
-        <h3>Extracted Actions</h3>
+        <h3>{t.extracted_actions}</h3>
         {!hasActions ? (
-          <p style={styles.empty}>No extracted actions yet. Run AI extraction first.</p>
+          <p style={styles.empty}>{t.no_extracted_actions}</p>
         ) : (
           <div style={styles.actions}>
             {caseItem.actions.map((action) => (
               <ActionCard
                 key={action.id}
                 action={action}
+                lang={lang}
                 onRefresh={async () => {
                   const updated = await getCase(caseItem.id);
                   onSelectCase?.(updated);
@@ -190,15 +194,15 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh }) {
 
       {hasCompleted && (
         <section style={styles.section}>
-          <h3>Proof Upload</h3>
-          <ProofUpload caseId={caseItem.id} onUploaded={onRefresh} />
+          <h3>{t.proof_upload}</h3>
+          <ProofUpload caseId={caseItem.id} lang={lang} onUploaded={onRefresh} />
         </section>
       )}
 
       {hasActions && !hasCompleted && (
         <section style={styles.section}>
           <p style={styles.empty}>
-            Proof upload will be available once at least one action is marked completed.
+            {t.proof_upload_hint}
           </p>
         </section>
       )}

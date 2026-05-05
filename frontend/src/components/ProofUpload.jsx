@@ -2,11 +2,16 @@
 
 import { useState } from "react";
 import { uploadProof } from "../services/api";
+import en from "../locales/en.json";
+import kn from "../locales/kn.json";
 
-export default function ProofUpload({ caseId, onUploaded }) {
+// Fix: Complete bilingual support with lang prop
+export default function ProofUpload({ caseId, onUploaded, lang = "en" }) {
   const [file, setFile] = useState(null);
   const [proofType, setProofType] = useState("compliance_report");
   const [uploadedBy, setUploadedBy] = useState("Officer");
+  
+  const t = lang === "kn" ? kn : en;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,19 +26,28 @@ export default function ProofUpload({ caseId, onUploaded }) {
     }
   };
 
+  const getProofTypeLabel = (type) => {
+    switch (type) {
+      case "compliance_report": return t.compliance_report;
+      case "order_copy": return t.order_copy;
+      case "supporting_document": return t.supporting_document;
+      default: return type;
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} style={styles.form}>
       <select value={proofType} onChange={(e) => setProofType(e.target.value)} style={styles.input}>
-        <option value="compliance_report">Compliance Report</option>
-        <option value="order_copy">Order Copy</option>
-        <option value="supporting_document">Supporting Document</option>
+        <option value="compliance_report">{t.compliance_report}</option>
+        <option value="order_copy">{t.order_copy}</option>
+        <option value="supporting_document">{t.supporting_document}</option>
       </select>
 
       <input
         style={styles.input}
         value={uploadedBy}
         onChange={(e) => setUploadedBy(e.target.value)}
-        placeholder="Uploaded by"
+        placeholder={t.uploaded_by || "Uploaded by"}
       />
 
       <input
@@ -43,7 +57,7 @@ export default function ProofUpload({ caseId, onUploaded }) {
       />
 
       <button style={styles.button} type="submit">
-        Upload Proof
+        {t.upload}
       </button>
     </form>
   );

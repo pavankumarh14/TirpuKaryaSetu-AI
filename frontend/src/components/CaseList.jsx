@@ -1,18 +1,24 @@
 // frontend/src/components/CaseList.jsx
 
-export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh }) {
+import en from "../locales/en.json";
+import kn from "../locales/kn.json";
+
+// Fix: Complete bilingual support with lang prop
+export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh, lang = "en" }) {
+  const t = lang === "kn" ? kn : en;
+
   return (
     <div style={styles.panel}>
       <div style={styles.topBar}>
         <div>
-          <h2 style={styles.heading}>Case Registry</h2>
-          <p style={styles.subtext}>Uploaded judgments and extraction status</p>
+          <h2 style={styles.heading}>{t.cases}</h2>
+          <p style={styles.subtext}>{t.cases_subtext || "Uploaded judgments and extraction status"}</p>
         </div>
-        <button style={styles.btn} onClick={onRefresh}>Refresh</button>
+        <button style={styles.btn} onClick={onRefresh}>{t.refresh}</button>
       </div>
 
       {!cases?.length ? (
-        <p style={styles.empty}>No cases available yet.</p>
+        <p style={styles.empty}>{t.no_cases || "No cases available yet."}</p>
       ) : (
         <div style={styles.list}>
           {cases.map((item) => (
@@ -23,11 +29,12 @@ export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh 
             >
               <div style={styles.itemTop}>
                 <strong>#{item.id}</strong>
-                <span style={styles.status}>{item.status}</span>
+                {/* Fix: Translate status */}
+                <span style={styles.status}>{t.lowercase?.[item.status] || item.status}</span>
               </div>
-              <div style={styles.caseNo}>{item.case_number || "Case number pending"}</div>
-              <div style={styles.meta}>{item.court_name || "Court pending"}</div>
-              <div style={styles.meta}>{item.respondent_department || "Department pending"}</div>
+              <div style={styles.caseNo}>{item.case_number || t.pending_extraction}</div>
+              <div style={styles.meta}>{item.court_name || t.pending_extraction}</div>
+              <div style={styles.meta}>{item.respondent_department || t.department}</div>
             </button>
           ))}
         </div>

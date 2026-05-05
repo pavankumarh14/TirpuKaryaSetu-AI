@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { submitReview } from "../services/api";
+import en from "../locales/en.json";
+import kn from "../locales/kn.json";
 
-export default function ReviewPanel({ queue, onRefresh }) {
+// Fix: Complete bilingual support with lang prop
+export default function ReviewPanel({ queue, onRefresh, lang = "en" }) {
   const [notes, setNotes] = useState({});
   const [assignments, setAssignments] = useState({});
+  
+  const t = lang === "kn" ? kn : en;
 
   const handleReview = async (actionId, reviewAction) => {
     try {
@@ -28,41 +33,50 @@ export default function ReviewPanel({ queue, onRefresh }) {
     }
   };
 
+  // Translate status for display
+  const getStatusText = (status) => t.lowercase?.[status] || status;
+
   return (
     <div style={styles.panel}>
-      <h2 style={styles.heading}>Officer Review Queue</h2>
-      <p style={styles.subtext}>
-        Review AI-extracted actions before they appear as verified government tasks
-      </p>
+      <h2 style={styles.heading}>{t.officer_review_queue}</h2>
+      <p style={styles.subtext}>{t.review_queue_subtext}</p>
 
       {!queue?.length ? (
-        <p style={styles.empty}>No actions pending review.</p>
+        <p style={styles.empty}>{t.no_actions_pending}</p>
       ) : (
         <div style={styles.list}>
           {queue.map((action) => (
             <div key={action.id} style={styles.card}>
               <div style={styles.row}>
-                <strong>Action #{action.id}</strong>
-                <span style={styles.status}>{action.status}</span>
+                <strong>{t.action_id.replace("{id}", action.id)}</strong>
+                <span style={styles.status}>{getStatusText(action.status)}</span>
               </div>
 
               <p style={styles.actionText}>{action.action_text}</p>
 
+              {/* Show Kannada translation if available */}
+              {action.action_text_kn && (
+                <p style={styles.kannadaText}>
+                  <span style={styles.kannadaLabel}>{t.kannada_label}</span>
+                  {action.action_text_kn}
+                </p>
+              )}
+
               <div style={styles.metaGrid}>
-                <Meta label="Department" value={action.owner_department} />
-                <Meta label="Risk" value={action.risk_level} />
-                <Meta label="Confidence" value={action.confidence} />
-                <Meta label="Assigned To" value={action.assigned_to} />
+                <Meta label={t.owner_department} value={action.owner_department} />
+                <Meta label={t.risk_level} value={action.risk_level} />
+                <Meta label={t.confidence} value={`${Math.round((action.confidence || 0) * 100)}%`} />
+                <Meta label={t.assigned_to} value={action.assigned_to} />
               </div>
 
               <div style={styles.evidence}>
-                <strong>Evidence:</strong>
-                <div>{action.source_evidence || "No evidence captured"}</div>
+                <strong>{t.evidence}</strong>
+                <div>{action.source_evidence || t.no_evidence}</div>
               </div>
 
               <input
                 style={styles.input}
-                placeholder="Assign to officer"
+                placeholder={t.assign_to_officer}
                 value={assignments[action.id] || ""}
                 onChange={(e) =>
                   setAssignments((prev) => ({ ...prev, [action.id]: e.target.value }))
@@ -71,7 +85,7 @@ export default function ReviewPanel({ queue, onRefresh }) {
 
               <textarea
                 style={styles.textarea}
-                placeholder="Officer notes"
+                placeholder={t.officer_notes}
                 value={notes[action.id] || ""}
                 onChange={(e) =>
                   setNotes((prev) => ({ ...prev, [action.id]: e.target.value }))
@@ -80,16 +94,16 @@ export default function ReviewPanel({ queue, onRefresh }) {
 
               <div style={styles.actions}>
                 <button style={styles.approve} onClick={() => handleReview(action.id, "approve")}>
-                  Approve
+                  {t.approve}
                 </button>
                 <button style={styles.assign} onClick={() => handleReview(action.id, "assign")}>
-                  Assign
+                  {t.assign}
                 </button>
                 <button style={styles.edit} onClick={() => handleReview(action.id, "edit")}>
-                  Mark Edited
+                  {t.mark_edited}
                 </button>
                 <button style={styles.reject} onClick={() => handleReview(action.id, "reject")}>
-                  Reject
+                  {t.reject}
                 </button>
               </div>
             </div>
@@ -135,6 +149,21 @@ const styles = {
     color: "#1d4ed8",
   },
   actionText: { marginTop: "12px", fontWeight: 600 },
+  // Kannada text style
+  kannadaText: {
+    fontSize: "14px",
+    color: "#1e40af",
+    background: "#eff6ff",
+    borderRadius: "8px",
+    padding: "8px 12px",
+    marginTop: "8px",
+    lineHeight: 1.6,
+    fontFamily: "'Noto Sans Kannada', sans-serif",
+  },
+  kannadaLabel: {
+    fontWeight: 700,
+    marginRight: "4px",
+  },
   metaGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",

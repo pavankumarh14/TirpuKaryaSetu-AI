@@ -1,11 +1,16 @@
 // frontend/src/components/CaseUpload.jsx
 
 import { useState } from "react";
+import en from "../locales/en.json";
+import kn from "../locales/kn.json";
 
-export default function CaseUpload({ onUploadSuccess }) {
+// Fix: Complete bilingual support with lang prop
+export default function CaseUpload({ onUploaded, lang = "en" }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
+  
+  const t = lang === "kn" ? kn : en;
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -14,7 +19,7 @@ export default function CaseUpload({ onUploadSuccess }) {
 
   const handleUpload = async () => {
     if (!file) {
-      setMessage("Please select a PDF file");
+      setMessage(t.select_pdf || "Please select a PDF file");
       return;
     }
 
@@ -31,15 +36,15 @@ export default function CaseUpload({ onUploadSuccess }) {
       });
 
       if (!response.ok) {
-        throw new Error("Upload failed");
+        throw new Error(t.upload_failed || "Upload failed");
       }
 
       const data = await response.json();
-      setMessage(`✅ Case #${data.id} uploaded successfully!`);
+      setMessage((t.upload_success || "✅ Case #{id} uploaded successfully!").replace("{id}", data.id));
       setFile(null);
-      onUploadSuccess?.();
+      onUploaded?.();
     } catch (error) {
-      setMessage(`❌ Error: ${error.message}`);
+      setMessage(`❌ ${t.error || "Error"}: ${error.message}`);
     } finally {
       setUploading(false);
     }
@@ -47,7 +52,7 @@ export default function CaseUpload({ onUploadSuccess }) {
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>Upload Court Judgment</h3>
+      <h3 style={styles.title}>{t.upload_case || "Upload Case"}</h3>
       <div style={styles.row}>
         <input
           type="file"
@@ -61,7 +66,7 @@ export default function CaseUpload({ onUploadSuccess }) {
           disabled={!file || uploading}
           style={file && !uploading ? styles.button : styles.buttonDisabled}
         >
-          {uploading ? "Uploading..." : "Upload PDF"}
+          {uploading ? t.uploading : (t.upload_pdf || "Upload PDF")}
         </button>
       </div>
       {message && <p style={styles.message}>{message}</p>}

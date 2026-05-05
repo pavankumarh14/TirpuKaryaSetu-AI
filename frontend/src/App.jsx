@@ -119,6 +119,8 @@ export default function App() {
                     cases={cases}
                     selectedCase={selectedCase}
                     onSelectCase={setSelectedCase}
+                    onRefresh={loadAll}
+                    lang={lang}
                   />
                 </div>
                 <div style={styles.caseRight}>
@@ -126,15 +128,16 @@ export default function App() {
                     caseItem={selectedCase}
                     onSelectCase={setSelectedCase}
                     onRefresh={loadAll}
+                    lang={lang}
                   />
                 </div>
               </div>
             )}
             {activeTab === "review" && (
-              <ReviewPanel onRefresh={loadAll} />
+              <ReviewPanel queue={reviewQueue} onRefresh={loadAll} lang={lang} />
             )}
             {activeTab === "upload" && (
-              <CaseUpload onUploaded={loadAll} />
+              <CaseUpload onUploaded={loadAll} lang={lang} />
             )}
           </>
         )}

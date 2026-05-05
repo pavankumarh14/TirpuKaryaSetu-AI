@@ -53,6 +53,7 @@ def _safe_json_loads(raw_text: str) -> Dict:
     return json.loads(cleaned)
 
 
+# Fix: Add bilingual support to fallback extraction
 def local_fallback_extract(text: str) -> Dict:
     case_number_match = re.search(r"(W\.?P\.?|Case)\s*No\.?\s*[:\-]?\s*([A-Za-z0-9\/\-\(\)]+)", text, re.IGNORECASE)
     case_number = case_number_match.group(2).strip() if case_number_match else None
@@ -75,9 +76,12 @@ def local_fallback_extract(text: str) -> Dict:
         if deadline_match:
             deadline_expression = deadline_match.group(0).strip()
 
+        # Fix: Fallback actions now include action_text_kn marker
+        # When using local fallback, we mark it as needing translation
         actions.append(
             {
                 "action_text": sentence[:300],
+                "action_text_kn": None,  # Will be null - frontend will hide when null
                 "owner_department": None,
                 "deadline_expression": deadline_expression,
                 "risk_level": "medium",
@@ -136,7 +140,16 @@ Judgment text chunks:
 """
 
     response = model.generate_content(prompt)
-    return _safe_json_loads(response.text)
+    result = _safe_json_loads(response.text)
+    
+    # Fix: Validate that all actions have action_text_kn field
+    # If Gemini returns actions without action_text_kn, we add it as None
+    if "actions" in result and isinstance(result["actions"], list):
+        for action in result["actions"]:
+            if "action_text_kn" not in action:
+                action["action_text_kn"] = None
+    
+    return result
 
 
 def run_ai_extraction(text: str) -> Dict:

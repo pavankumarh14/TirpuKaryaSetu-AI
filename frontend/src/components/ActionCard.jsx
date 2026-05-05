@@ -1,18 +1,20 @@
 // frontend/src/components/ActionCard.jsx
 
 import { completeAction } from "../services/api";
+import en from "../locales/en.json";
+import kn from "../locales/kn.json";
 
-// Gap 5: Format confidence score from 0-1 float to human-readable label
-function formatConfidence(conf) {
-  if (conf == null) return "N/A";
+// Format confidence score from 0-1 float to human-readable label
+function formatConfidence(conf, t) {
+  if (conf == null) return t.na;
   const pct = Math.round(conf * 100);
-  let label = "Low";
-  if (pct >= 85) label = "High";
-  else if (pct >= 60) label = "Medium";
+  let label = t.low;
+  if (pct >= 85) label = t.high;
+  else if (pct >= 60) label = t.medium;
   return `${label} (${pct}%)`;
 }
 
-// Gap 3: Compute days remaining until a deadline date
+// Compute days remaining until a deadline date
 function daysUntil(dateStr) {
   if (!dateStr) return null;
   const now = new Date();
@@ -21,7 +23,10 @@ function daysUntil(dateStr) {
   return diff;
 }
 
-export default function ActionCard({ action, onRefresh }) {
+// Fix: Complete bilingual support with lang prop
+export default function ActionCard({ action, onRefresh, lang = "en" }) {
+  const t = lang === "kn" ? kn : en;
+
   const handleComplete = async () => {
     try {
       await completeAction(action.id);
@@ -31,88 +36,91 @@ export default function ActionCard({ action, onRefresh }) {
     }
   };
 
-  // Gap 3: Deadline countdown
+  // Deadline countdown
   const deadlineDays = daysUntil(action.deadline);
-  const deadlineLabel = action.deadline_expression || (action.deadline ? new Date(action.deadline).toLocaleDateString("en-IN") : null);
+  const deadlineLabel = action.deadline_expression || (action.deadline ? new Date(action.deadline).toLocaleDateString(lang === "kn" ? "en-IN" : "en-US") : null);
   const isOverdue = deadlineDays !== null && deadlineDays < 0;
   const isUrgent = deadlineDays !== null && deadlineDays >= 0 && deadlineDays <= 7;
 
-  // Gap 6: Appeal window
+  // Appeal window
   const appealLabel = action.appeal_window_expression || (action.appeal_window_days ? `${action.appeal_window_days} days` : null);
+
+  // Translate status
+  const statusText = t.lowercase?.[action.status] || action.status;
 
   return (
     <div style={styles.card}>
       <div style={styles.row}>
-        <strong>Action #{action.id}</strong>
-        <span style={{ ...styles.status, background: statusColor(action.status) }}>{action.status}</span>
+        <strong>{t.action_id.replace("{id}", action.id)}</strong>
+        <span style={{ ...styles.status, background: statusColor(action.status) }}>{statusText}</span>
       </div>
 
-      {/* Gap 1: English action text */}
+      {/* English action text */}
       <p style={styles.text}>{action.action_text}</p>
 
-      {/* Gap 1: Kannada bilingual translation */}
+      {/* Kannada bilingual translation - displays if available */}
       {action.action_text_kn && (
         <p style={styles.kannadaText}>
-          <span style={styles.kannadaLabel}>ಕನ್ನಡ: </span>
+          <span style={styles.kannadaLabel}>{t.kannada_label}</span>
           {action.action_text_kn}
         </p>
       )}
 
       <div style={styles.grid}>
-        <Info label="Department" value={action.owner_department} />
+        <Info label={t.owner_department} value={action.owner_department} />
 
-        {/* Gap 3: Deadline with countdown timer */}
+        {/* Deadline with countdown timer */}
         <div style={styles.infoCell}>
-          <span style={styles.infoLabel}>Deadline</span>
+          <span style={styles.infoLabel}>{t.deadline}</span>
           <span style={{ ...styles.infoValue, color: isOverdue ? "#dc2626" : isUrgent ? "#d97706" : "inherit" }}>
             {deadlineLabel || "—"}
             {deadlineDays !== null && (
               <span style={{ fontSize: "11px", display: "block", fontWeight: 600, color: isOverdue ? "#dc2626" : isUrgent ? "#d97706" : "#16a34a" }}>
-                {isOverdue ? `Overdue by ${Math.abs(deadlineDays)} day(s)` : deadlineDays === 0 ? "Due today!" : `${deadlineDays} day(s) remaining`}
+                {isOverdue ? t.overdue_by.replace("{days}", Math.abs(deadlineDays)) : deadlineDays === 0 ? t.due_today : t.days_remaining.replace("{days}", deadlineDays)}
               </span>
             )}
           </span>
         </div>
 
-        <Info label="Risk Level" value={action.risk_level} />
-        <Info label="Assigned To" value={action.assigned_to} />
+        <Info label={t.risk_level} value={action.risk_level} />
+        <Info label={t.assigned_to} value={action.assigned_to} />
 
-        {/* Gap 5: Confidence with human-readable label */}
+        {/* Confidence with human-readable label */}
         <div style={styles.infoCell}>
-          <span style={styles.infoLabel}>Confidence</span>
-          <span style={styles.infoValue}>{formatConfidence(action.confidence)}</span>
+          <span style={styles.infoLabel}>{t.confidence}</span>
+          <span style={styles.infoValue}>{formatConfidence(action.confidence, t)}</span>
         </div>
 
-        <Info label="Contempt Risk" value={String(action.contempt_risk)} />
+        <Info label={t.contempt_risk_flag} value={String(action.contempt_risk)} />
 
-        {/* Gap 6: Appeal window countdown */}
+        {/* Appeal window countdown */}
         {appealLabel && (
           <div style={styles.infoCell}>
-            <span style={styles.infoLabel}>Appeal Window</span>
+            <span style={styles.infoLabel}>{t.appeal_window}</span>
             <span style={{ ...styles.infoValue, color: "#7c3aed" }}>{appealLabel}</span>
           </div>
         )}
 
-        {/* Gap 5: Source page reference */}
+        {/* Source page reference */}
         {action.source_page && (
-          <Info label="Source Page" value={`Page ${action.source_page}`} />
+          <Info label={t.source_page} value={`${t.page} ${action.source_page}`} />
         )}
       </div>
 
       {/* Source Evidence */}
       <div style={styles.evidence}>
-        <strong>Source Evidence</strong>
+        <strong>{t.source_evidence}</strong>
         <div style={{ marginTop: "6px", fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>
-          {action.source_evidence || "No source evidence available"}
+          {action.source_evidence || t.no_source_evidence}
         </div>
         {action.source_page && (
-          <div style={{ marginTop: "4px", fontSize: "11px", color: "#6b7280" }}>📄 Page {action.source_page}</div>
+          <div style={{ marginTop: "4px", fontSize: "11px", color: "#6b7280" }}>📄 {t.page} {action.source_page}</div>
         )}
       </div>
 
       {action.status !== "completed" && (
         <button style={styles.completeBtn} onClick={handleComplete}>
-          Mark Completed
+          {t.mark_completed}
         </button>
       )}
     </div>
@@ -169,7 +177,7 @@ const styles = {
     marginBottom: "8px",
     lineHeight: 1.5,
   },
-  // Gap 1: Kannada text style
+  // Kannada text style
   kannadaText: {
     fontSize: "14px",
     color: "#1e40af",
