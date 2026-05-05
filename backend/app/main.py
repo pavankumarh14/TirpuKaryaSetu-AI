@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import Base, engine
 from app.routers import actions, cases, dashboard, proofs, review
+from app.schema_compat import ensure_schema_compatibility
 
 # Ensure storage directories exist
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -17,6 +18,7 @@ os.makedirs(os.path.join(settings.STATIC_DIR, "proofs"), exist_ok=True)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+ensure_schema_compatibility(engine)
 
 app = FastAPI(
     title=settings.APP_NAME,

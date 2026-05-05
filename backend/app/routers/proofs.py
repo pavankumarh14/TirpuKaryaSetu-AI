@@ -56,9 +56,8 @@ async def upload_proof(
         case_id=case_id,
         action_id=action_id,
         file_path=str(target_path),
-        proof_type=proof_type,
+        document_type=proof_type,
         uploaded_by=uploaded_by,
-        verified=False,
     )
 
     db.add(proof)

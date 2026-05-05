@@ -84,6 +84,22 @@ class Review(ReviewBase):
         from_attributes = True
 
 
+class ProofBase(BaseModel):
+    file_path: str
+    document_type: Optional[str] = None
+    uploaded_by: Optional[str] = None
+
+
+class Proof(ProofBase):
+    id: int
+    case_id: int
+    action_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # Gap 2: Audit Trail schema
 class AuditLogOut(BaseModel):
     id: int
