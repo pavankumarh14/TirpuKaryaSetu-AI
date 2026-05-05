@@ -73,7 +73,12 @@ export async function completeAction(actionId) {
   });
 }
 
-export async function uploadProof(caseId, formData) {
+export async function uploadProof(caseId, file, proofType, uploadedBy) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("proof_type", proofType);
+  formData.append("uploaded_by", uploadedBy);
+
   return request(`/proofs/upload/${caseId}`, {
     method: "POST",
     body: formData,

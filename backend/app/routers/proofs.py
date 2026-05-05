@@ -18,6 +18,7 @@ router = APIRouter()
 
 
 @router.post("/upload", response_model=ProofSchema)
+@router.post("/upload/{case_id}", response_model=ProofSchema)
 async def upload_proof(
     case_id: int,
     proof_type: str = Form(...),

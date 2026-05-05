@@ -39,6 +39,7 @@ def ensure_schema_compatibility(engine):
         },
         "proofs": {
             "document_type": "VARCHAR",
+            "created_at": "TIMESTAMP DEFAULT now()",
         },
     }
 
