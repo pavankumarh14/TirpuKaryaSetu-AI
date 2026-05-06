@@ -96,14 +96,14 @@ docker-compose up --build
 The application will be available at:
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
+- **API Docs**: http://localhost:8000/api/docs
 
 ### Manual Setup
 
 #### Backend
 ```bash
 cd backend
-pip install -r app/requirements.txt
+pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 

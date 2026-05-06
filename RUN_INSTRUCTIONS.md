@@ -16,9 +16,13 @@ Before you begin, ensure you have:
 
 ---
 
-## 🎯 Option 1: Docker Compose (Easiest - Recommended)
+## 🎯 Option 1: Docker Compose (Easiest - Recommended for Judges)
 
-This runs everything with one command.
+This runs everything with one command:
+
+- PostgreSQL database
+- FastAPI backend
+- React frontend served by Nginx
 
 ### Step 1: Clone the Repository
 
@@ -53,7 +57,7 @@ docker-compose up --build
 This will:
 - Start PostgreSQL database
 - Start backend API (FastAPI)
-- Start frontend (React/Vite)
+- Build and start frontend (React production build served by Nginx)
 
 ### Step 4: Access the Application
 
@@ -63,7 +67,7 @@ Wait for all services to start (~2-3 minutes), then open:
 |---------|-----|
 | **Frontend App** | http://localhost:5173 |
 | **Backend API** | http://localhost:8000 |
-| **API Documentation** | http://localhost:8000/docs |
+| **API Documentation** | http://localhost:8000/api/docs |
 
 ### Step 5: Stop the Application
 
@@ -71,6 +75,12 @@ Wait for all services to start (~2-3 minutes), then open:
 # Press Ctrl+C to stop
 # Or run:
 docker-compose down
+```
+
+To also delete the database volume and start fresh:
+
+```bash
+docker-compose down -v
 ```
 
 ---
@@ -109,7 +119,7 @@ source venv/bin/activate
 venv\Scripts\activate
 
 # Install dependencies
-pip install -r app/requirements.txt
+pip install -r requirements.txt
 
 # Create .env file
 cat > .env << EOF
@@ -160,7 +170,7 @@ docker run --name tirpukaryasetu-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB
 
 # Terminal 2: Start backend
 cd backend
-pip install -r app/requirements.txt
+pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
 # Terminal 3: Start frontend
@@ -222,7 +232,7 @@ docker start tirpukaryasetu-db
 ```bash
 # Reinstall dependencies
 cd backend
-pip install -r app/requirements.txt
+pip install -r requirements.txt
 
 cd ../frontend
 npm install
@@ -266,6 +276,6 @@ Note: The AI extracts actions in English with optional Kannada translation.
 ---
 
 **Need Help?** 
-- Check the API docs at http://localhost:8000/docs
+- Check the API docs at http://localhost:8000/api/docs
 - Review logs in terminal for errors
 - Ensure all services are running
