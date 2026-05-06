@@ -60,6 +60,10 @@ def delete_case(case_id: int, db: Session = Depends(get_db)):
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     
+    # Capture case data before deletion for audit log
+    case_number = case.case_number
+    case_status = case.status.value if case.status else None
+    
     # SQLAlchemy cascade will handle related actions, extractions, reviews, audit_logs
     db.delete(case)
     db.commit()
@@ -71,7 +75,7 @@ def delete_case(case_id: int, db: Session = Depends(get_db)):
         entity_id=case_id,
         event="case_deleted",
         actor="user",
-        before_value={"case_number": case.case_number, "status": case.status.value if case.status else None},
+        before_value={"case_number": case_number, "status": case_status},
     )
     
     return {"status": "success", "message": f"Case #{case_id} deleted successfully"}
