@@ -9,16 +9,25 @@ import kn from "../locales/kn.json";
 // Fix: Complete bilingual support with lang prop
 export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "en" }) {
   const [busy, setBusy] = useState(false);
+  const [extractStep, setExtractStep] = useState(0);
   const [extractError, setExtractError] = useState(null);
   const [auditLog, setAuditLog] = useState([]);
   const [showAudit, setShowAudit] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
   
   const t = lang === "kn" ? kn : en;
+  const extractionSteps = [
+    t.extract_step_reading || "Reading judgment text and OCR output",
+    t.extract_step_retrieving || "Finding relevant directions and deadlines",
+    t.extract_step_ai || "Generating structured action plan with AI",
+    t.extract_step_rules || "Applying deadline, appeal, and risk rules",
+    t.extract_step_saving || "Saving actions for officer review",
+  ];
 
   const handleExtract = async () => {
     if (!caseItem?.id) return;
     setBusy(true);
+    setExtractStep(0);
     setExtractError(null);
     try {
       await triggerExtraction(caseItem.id);
@@ -32,6 +41,16 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (!busy) return undefined;
+
+    const timer = window.setInterval(() => {
+      setExtractStep((current) => Math.min(current + 1, extractionSteps.length - 1));
+    }, 1800);
+
+    return () => window.clearInterval(timer);
+  }, [busy, extractionSteps.length]);
 
   const handleToggleAudit = async () => {
     if (!showAudit && auditLog.length === 0 && caseItem?.id) {
@@ -77,6 +96,11 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
 
   return (
     <div style={styles.panel}>
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
       <div style={styles.header}>
         <div>
           <h2 style={styles.heading}>{t.case_detail}</h2>
@@ -98,10 +122,40 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
             onClick={handleExtract}
             disabled={busy}
           >
-            {busy ? t.extracting : t.run_extraction}
+            {busy ? (
+              <span style={styles.buttonContent}>
+                <span style={styles.spinnerSmall} />
+                {t.extracting}
+              </span>
+            ) : (
+              t.run_extraction
+            )}
           </button>
         </div>
       </div>
+
+      {busy && (
+        <div style={styles.extractProgress}>
+          <div style={styles.progressHeader}>
+            <span style={styles.spinner} />
+            <div>
+              <strong>{t.extraction_in_progress || "Extraction in progress"}</strong>
+              <p style={styles.progressText}>{extractionSteps[extractStep]}</p>
+            </div>
+          </div>
+          <div style={styles.progressTrack}>
+            <div
+              style={{
+                ...styles.progressFill,
+                width: `${((extractStep + 1) / extractionSteps.length) * 100}%`,
+              }}
+            />
+          </div>
+          <p style={styles.progressHint}>
+            {t.extraction_wait_hint || "This can take a little while for long or scanned judgments."}
+          </p>
+        </div>
+      )}
 
       {extractError && (
         <div style={styles.errorBanner}>
@@ -259,6 +313,57 @@ const styles = {
     padding: "10px 14px",
     borderRadius: "8px",
   },
+  buttonContent: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  spinnerSmall: {
+    width: "14px",
+    height: "14px",
+    border: "2px solid rgba(255,255,255,0.45)",
+    borderTopColor: "white",
+    borderRadius: "50%",
+    display: "inline-block",
+    animation: "spin 0.8s linear infinite",
+  },
+  extractProgress: {
+    background: "#f0f9ff",
+    border: "1px solid #7dd3fc",
+    borderRadius: "10px",
+    padding: "14px 16px",
+    marginBottom: "16px",
+  },
+  progressHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    color: "#075985",
+  },
+  spinner: {
+    width: "24px",
+    height: "24px",
+    border: "3px solid #bae6fd",
+    borderTopColor: "#0284c7",
+    borderRadius: "50%",
+    flex: "0 0 auto",
+    animation: "spin 0.8s linear infinite",
+  },
+  progressText: { margin: "4px 0 0", color: "#0369a1", fontSize: "14px" },
+  progressTrack: {
+    height: "8px",
+    background: "#e0f2fe",
+    borderRadius: "999px",
+    overflow: "hidden",
+    marginTop: "12px",
+  },
+  progressFill: {
+    height: "100%",
+    background: "#0284c7",
+    borderRadius: "999px",
+    transition: "width 0.35s ease",
+  },
+  progressHint: { margin: "10px 0 0", color: "#64748b", fontSize: "13px" },
   auditBtn: {
     border: "1px solid #94a3b8",
     background: "white",
