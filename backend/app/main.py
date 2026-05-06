@@ -49,6 +49,7 @@ app.include_router(proofs.router, prefix="/api/proofs", tags=["Proofs"])
 app.include_router(ccms.router, prefix="/api/ccms", tags=["CCMS/CIS"])
 
 
+@app.get("/health")
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""

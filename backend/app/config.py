@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     STATIC_DIR: str = "./static"
     MAX_FILE_SIZE_MB: int = 50
 
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "https://tirpukaryasetu.onrender.com", "https://tirpukaryasetu-ai.onrender.com"]
 
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
