@@ -1,8 +1,10 @@
 # backend/app/main.py
 
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -60,11 +62,29 @@ async def health_check():
     }
 
 
-@app.get("/")
+@app.get("/api/root")
 async def root():
-    """Root endpoint."""
+    """API root endpoint."""
     return {
         "message": "Welcome to TirpuKaryaSetu AI",
         "docs": "/api/docs",
         "health": "/api/health",
     }
+
+
+FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+if FRONTEND_DIST.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=FRONTEND_DIST / "assets"),
+        name="frontend-assets",
+    )
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        """Serve the React app for single-service deployments."""
+        target = FRONTEND_DIST / full_path
+        if full_path and target.is_file():
+            return FileResponse(target)
+        return FileResponse(FRONTEND_DIST / "index.html")

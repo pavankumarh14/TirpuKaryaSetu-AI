@@ -80,6 +80,30 @@ TirpuKaryaSetu-AI/
 
 ## Quick Start
 
+### Render Single Web Service
+
+Use this when deploying both the backend API and frontend UI on one Render URL.
+
+Recommended Render settings:
+
+- **Environment**: Docker
+- **Dockerfile Path**: `Dockerfile`
+- **Health Check Path**: `/api/health`
+
+Set environment variables in Render:
+
+```env
+DATABASE_URL=<your Render PostgreSQL internal database URL>
+GEMINI_API_KEY=<your Gemini API key>
+ALLOWED_ORIGINS=https://your-render-service.onrender.com
+```
+
+After deploy:
+
+- **Frontend UI**: `https://your-render-service.onrender.com`
+- **API Docs**: `https://your-render-service.onrender.com/api/docs`
+- **Health**: `https://your-render-service.onrender.com/api/health`
+
 ### Using Docker Compose (Recommended)
 
 ```bash

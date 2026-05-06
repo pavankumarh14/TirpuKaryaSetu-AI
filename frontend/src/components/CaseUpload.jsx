@@ -1,7 +1,7 @@
 // frontend/src/components/CaseUpload.jsx
 
 import { useEffect, useState } from "react";
-import { getCcmsDisposedCases, importCcmsCase } from "../services/api";
+import { getCcmsDisposedCases, importCcmsCase, uploadCase } from "../services/api";
 import en from "../locales/en.json";
 import kn from "../locales/kn.json";
 
@@ -36,19 +36,7 @@ export default function CaseUpload({ onUploaded, lang = "en" }) {
     setMessage("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("http://localhost:8000/api/cases/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(t.upload_failed || "Upload failed");
-      }
-
-      const data = await response.json();
+      const data = await uploadCase(file);
       const successMessage = (t.upload_success || "Case #{id} uploaded successfully!").replace("{id}", data.id);
       setMessage(successMessage);
       window.alert(successMessage);

@@ -85,6 +85,37 @@ docker-compose down -v
 
 ---
 
+## ☁️ Render Single-Service Deployment
+
+Use this if you want one Render URL to serve both the React UI and FastAPI backend.
+
+Create a Render **Web Service** with:
+
+```text
+Environment: Docker
+Dockerfile Path: Dockerfile
+Health Check Path: /api/health
+```
+
+Set these Render environment variables:
+
+```env
+DATABASE_URL=<your Render PostgreSQL internal database URL>
+GEMINI_API_KEY=<your Gemini API key>
+ALLOWED_ORIGINS=https://your-render-service.onrender.com
+DEBUG=false
+```
+
+After deployment:
+
+| Page | URL |
+|------|-----|
+| **Frontend UI** | https://your-render-service.onrender.com |
+| **API Docs** | https://your-render-service.onrender.com/api/docs |
+| **Health** | https://your-render-service.onrender.com/api/health |
+
+---
+
 ## 💻 Option 2: Manual Setup (More Control)
 
 ### Step 1: Start PostgreSQL Database

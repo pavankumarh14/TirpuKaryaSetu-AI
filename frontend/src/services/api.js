@@ -1,6 +1,6 @@
 // frontend/src/services/api.js
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -21,6 +21,16 @@ async function request(path, options = {}) {
 
 export async function getCases() {
   return request("/cases");
+}
+
+export async function uploadCase(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return request("/cases/upload", {
+    method: "POST",
+    body: formData,
+  });
 }
 
 export async function getCase(caseId) {
