@@ -153,6 +153,15 @@ class Case(CaseBase):
         from_attributes = True
 
 
+class CaseListItem(CaseBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class DashboardStats(BaseModel):
     total_cases: int
     pending_cases: int

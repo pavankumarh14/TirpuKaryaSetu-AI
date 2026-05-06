@@ -5,7 +5,7 @@ import CaseList from "./components/CaseList";
 import CaseDetail from "./components/CaseDetail";
 import CaseUpload from "./components/CaseUpload";
 import ReviewPanel from "./components/ReviewPanel";
-import { getCases, getDashboardStats, getReviewQueue } from "./services/api";
+import { getCase, getCases, getDashboardStats, getReviewQueue } from "./services/api";
 import en from "./locales/en.json";
 import kn from "./locales/kn.json";
 
@@ -14,6 +14,7 @@ export default function App() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [stats, setStats] = useState(null);
   const [reviewQueue, setReviewQueue] = useState([]);
+  const [casesLoadError, setCasesLoadError] = useState("");
   const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(false);
   // Gap 1: Language toggle state
@@ -30,13 +31,17 @@ export default function App() {
       ]);
       const orderedCases = [...(casesData || [])].sort((a, b) => a.id - b.id);
       setCases(orderedCases);
+      setCasesLoadError("");
       setSelectedCase((current) =>
         current ? orderedCases.find((item) => item.id === current.id) || current : current
       );
       setStats(statsData || null);
       setReviewQueue(queueData || []);
+      return orderedCases;
     } catch (error) {
       console.error("Failed to load app data", error);
+      setCasesLoadError(error?.message || "Failed to load case list");
+      return [];
     } finally {
       setLoading(false);
     }
@@ -46,11 +51,41 @@ export default function App() {
     loadAll();
   }, []);
 
+  const handleSelectCase = async (listItem) => {
+    if (!listItem?.id) {
+      setSelectedCase(null);
+      return;
+    }
+    try {
+      const fullCase = await getCase(listItem.id);
+      setSelectedCase(fullCase || listItem);
+    } catch (error) {
+      console.error("Failed to fetch full case details", error);
+      setSelectedCase(listItem);
+    }
+  };
+
   const tabs = [
-    { id: "dashboard", label: t.dashboard || "Dashboard" },
-    { id: "cases", label: t.cases || "Cases" },
-    { id: "review", label: t.review_queue || "Review Queue" },
-    { id: "upload", label: t.upload_judgment_order || "Upload Judgment Order" },
+    {
+      id: "dashboard",
+      label: t.dashboard || "Dashboard",
+      hint: t.tab_dashboard_hint || "Verified summary",
+    },
+    {
+      id: "cases",
+      label: t.cases || "Cases",
+      hint: t.tab_cases_hint || "Case detail + actions",
+    },
+    {
+      id: "review",
+      label: t.review_queue || "Review Queue",
+      hint: t.tab_review_hint || "Officer verification",
+    },
+    {
+      id: "upload",
+      label: t.upload_judgment_order || "Upload Judgment Order",
+      hint: t.tab_upload_hint || "Upload or import judgment",
+    },
   ];
 
   return (
@@ -97,7 +132,8 @@ export default function App() {
             }}
             onClick={() => setActiveTab(tab.id)}
           >
-            {tab.label}
+            <span style={styles.tabLabel}>{tab.label}</span>
+            <span style={styles.tabHint}>{tab.hint}</span>
           </button>
         ))}
       </nav>
@@ -121,8 +157,9 @@ export default function App() {
                 <div style={styles.caseLeft}>
                   <CaseList
                     cases={cases}
+                    loadError={casesLoadError}
                     selectedCase={selectedCase}
-                    onSelectCase={setSelectedCase}
+                    onSelectCase={handleSelectCase}
                     onRefresh={loadAll}
                     lang={lang}
                   />
@@ -141,7 +178,17 @@ export default function App() {
               <ReviewPanel queue={reviewQueue} onRefresh={loadAll} lang={lang} />
             )}
             {activeTab === "upload" && (
-              <CaseUpload onUploaded={loadAll} lang={lang} />
+              <CaseUpload
+                onUploaded={async (uploadedCase) => {
+                  const orderedCases = await loadAll();
+                  setActiveTab("cases");
+                  if (uploadedCase?.id) {
+                    const found = orderedCases.find((item) => item.id === uploadedCase.id);
+                    setSelectedCase(found || uploadedCase);
+                  }
+                }}
+                lang={lang}
+              />
             )}
           </>
         )}
@@ -186,24 +233,31 @@ const styles = {
   tab: {
     background: "none",
     border: "none",
+    outline: "none",
+    appearance: "none",
     borderBottom: "3px solid transparent",
-    padding: "14px 18px",
+    padding: "10px 18px 11px",
     cursor: "pointer",
-    fontWeight: 500,
     color: "#64748b",
     fontSize: "14px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "2px",
   },
+  tabLabel: { fontWeight: 700, lineHeight: 1.2 },
+  tabHint: { fontSize: "11px", color: "#94a3b8", lineHeight: 1.2 },
   activeTab: {
     borderBottomColor: "#2563eb",
     color: "#1d4ed8",
-    fontWeight: 700,
   },
   main: { padding: "24px" },
   loading: { textAlign: "center", padding: "60px", color: "#64748b" },
   caseLayout: {
     display: "grid",
-    gridTemplateColumns: "320px 1fr",
+    gridTemplateColumns: "380px 1fr",
     gap: "20px",
+    alignItems: "start",
   },
   caseLeft: {},
   caseRight: {},

@@ -90,9 +90,9 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
     .filter((a) => a.status === "completed");
 
   // Appeal window for contempt-risk actions
-  const contemptActions = caseItem.actions?.filter(
-    (a) => a.contempt_risk && a.status !== "completed"
-  ) || [];
+  const contemptActions = orderedActions
+    .map((action, index) => ({ ...action, caseActionNumber: index + 1 }))
+    .filter((a) => a.contempt_risk && a.status !== "completed");
 
   return (
     <div style={styles.panel}>
@@ -173,7 +173,9 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
           <ul style={styles.appealList}>
             {contemptActions.map((a) => (
               <li key={a.id}>
-                {t.action_text.replace("{id}", a.id).replace("{text}", a.action_text?.slice(0, 60) || t.no_source_evidence)}
+                {t.action_text
+                  .replace("{id}", a.caseActionNumber)
+                  .replace("{text}", a.action_text?.slice(0, 60) || t.no_source_evidence)}
                 {a.deadline && (
                   <span style={styles.deadlineTag}> {t.deadline}: {a.deadline}</span>
                 )}
@@ -299,7 +301,7 @@ const styles = {
   header: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: "12px",
     marginBottom: "18px",
   },
@@ -368,7 +370,7 @@ const styles = {
     border: "1px solid #94a3b8",
     background: "white",
     color: "#334155",
-    padding: "10px 14px",
+    padding: "11px 16px",
     borderRadius: "8px",
     cursor: "pointer",
     fontWeight: 500,
@@ -415,7 +417,7 @@ const styles = {
   },
   metaGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
     gap: "12px",
   },
   infoCard: {
@@ -423,9 +425,10 @@ const styles = {
     borderRadius: "10px",
     padding: "12px",
     background: "#f8fafc",
+    minHeight: "96px",
   },
   infoLabel: { fontSize: "12px", color: "#64748b", marginBottom: "4px" },
-  infoValue: { fontWeight: 600 },
+  infoValue: { fontWeight: 700, lineHeight: 1.35, fontSize: "16px" },
   section: { marginTop: "24px" },
   actions: { display: "flex", flexDirection: "column", gap: "14px" },
   empty: { color: "#64748b" },

@@ -1,9 +1,20 @@
 // frontend/src/services/api.js
 
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+function normalizeApiBase(rawBase) {
+  if (!rawBase) return "/api";
+  const trimmed = String(rawBase).replace(/\/+$/, "");
+  if (trimmed.endsWith("/api")) return trimmed;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return `${trimmed}/api`;
+  }
+  return trimmed;
+}
+
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL || "/api");
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const url = `${API_BASE}${path}`;
+  let response = await fetch(url, {
     headers: {
       ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(options.headers || {}),
@@ -14,6 +25,48 @@ async function request(path, options = {}) {
   if (!response.ok) {
     const text = await response.text();
     throw new Error(text || `API request failed: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    let text = await response.text();
+
+    // Local fallback: if a static frontend server returns index.html for /api,
+    // retry directly against backend on :8000.
+    const canRetryLocal =
+      typeof window !== "undefined" &&
+      window.location.hostname === "localhost" &&
+      API_BASE === "/api";
+
+    if (canRetryLocal && text.includes("<!DOCTYPE html>")) {
+      const directUrl = `http://localhost:8000/api${path}`;
+      response = await fetch(directUrl, {
+        headers: {
+          ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+          ...(options.headers || {}),
+        },
+        ...options,
+      });
+
+      if (!response.ok) {
+        const retryText = await response.text();
+        throw new Error(retryText || `API request failed: ${response.status}`);
+      }
+
+      const retryType = response.headers.get("content-type") || "";
+      if (!retryType.includes("application/json")) {
+        text = await response.text();
+        throw new Error(
+          `Expected JSON from API but got '${retryType || "unknown"}'. URL: ${directUrl}. Response starts with: ${text.slice(0, 120)}`
+        );
+      }
+
+      return response.json();
+    }
+
+    throw new Error(
+      `Expected JSON from API but got '${contentType || "unknown"}'. URL: ${url}. Response starts with: ${text.slice(0, 120)}`
+    );
   }
 
   return response.json();

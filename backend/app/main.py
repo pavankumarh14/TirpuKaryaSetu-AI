@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -84,6 +84,8 @@ if FRONTEND_DIST.exists():
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_frontend(full_path: str):
         """Serve the React app for single-service deployments."""
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="API route not found")
         target = FRONTEND_DIST / full_path
         if full_path and target.is_file():
             return FileResponse(target)

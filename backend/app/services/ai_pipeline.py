@@ -2,6 +2,7 @@
 
 import json
 import re
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -62,15 +63,39 @@ def local_fallback_extract(text: str) -> Dict:
     court_name = court_match.group(1).strip() if court_match else None
 
     directives = []
-    sentences = re.split(r"(?<=[.!?])\s+", text)
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", text)
     for sentence in sentences:
         lowered = sentence.lower()
-        if any(word in lowered for word in ["directed", "shall", "within", "ordered", "compliance"]):
-            if len(sentence.strip()) > 40:
-                directives.append(sentence.strip())
+        if any(word in lowered for word in ["directed", "shall", "within", "ordered", "compliance", "appeal", "dispose"]):
+            cleaned = sentence.strip()
+            if len(cleaned) > 18:
+                directives.append(cleaned)
+
+    # OCR-friendly fallback: scan line-by-line for directive-like phrases.
+    if not directives:
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        for line in lines:
+            lowered = line.lower()
+            if any(
+                token in lowered
+                for token in [
+                    "is directed",
+                    "are directed",
+                    "shall",
+                    "within",
+                    "weeks",
+                    "days",
+                    "respondent",
+                    "department",
+                    "appeal",
+                    "compliance",
+                    "disposed",
+                ]
+            ) and len(line) > 18:
+                directives.append(line)
 
     actions = []
-    for sentence in directives[:5]:
+    for sentence in directives[:8]:
         deadline_expression = None
         deadline_match = re.search(r"within\s+[^.,;]+", sentence, re.IGNORECASE)
         if deadline_match:
@@ -95,6 +120,27 @@ def local_fallback_extract(text: str) -> Dict:
                 "contempt_risk": False,
                 "confidence": 0.68,
                 "source_evidence": sentence,
+            }
+        )
+
+    if not actions:
+        actions.append(
+            {
+                "action_text": "Officer review required: AI could not confidently extract explicit directions. Please review judgment text and define compliance/appeal actions.",
+                "action_text_kn": None,
+                "action_type": "review_required",
+                "responsible_authority": None,
+                "nature_of_action": "Manual officer review",
+                "owner_department": None,
+                "deadline_expression": None,
+                "risk_level": "medium",
+                "recommendation": "Manually review the judgment and create action items.",
+                "appeal_recommendation": "Assess appeal feasibility based on order date and limitation.",
+                "limitation_period": None,
+                "appeal_window_expression": None,
+                "contempt_risk": False,
+                "confidence": 0.5,
+                "source_evidence": "No explicit direction sentence was automatically identified in fallback mode.",
             }
         )
 
@@ -146,8 +192,29 @@ Judgment text chunks:
 {json.dumps(relevant_chunks, ensure_ascii=False)}
 """
 
-    response = model.generate_content(prompt)
-    result = _safe_json_loads(response.text)
+    last_error = None
+    retries = max(1, int(getattr(settings, "GEMINI_MAX_RETRIES", 2)))
+    timeout_seconds = max(30, int(getattr(settings, "GEMINI_TIMEOUT_SECONDS", 90)))
+
+    for attempt in range(1, retries + 1):
+        try:
+            response = model.generate_content(
+                prompt,
+                request_options={"timeout": timeout_seconds},
+            )
+            result = _safe_json_loads(response.text)
+            break
+        except Exception as exc:
+            last_error = exc
+            if attempt < retries:
+                time.sleep(min(2 * attempt, 4))
+            else:
+                # Graceful fallback for any Gemini failure (timeout/model/rate-limit/parse/network).
+                return local_fallback_extract(text)
+    else:
+        if last_error:
+            return local_fallback_extract(text)
+        return local_fallback_extract(text)
     
     # Fix: Validate that all actions have action_text_kn field
     # If Gemini returns actions without action_text_kn, we add it as None
@@ -177,9 +244,16 @@ def run_ai_extraction(text: str) -> Dict:
         except Exception:
             order_date = None
 
+    raw_actions = result.get("actions", []) or []
+    if not raw_actions:
+        raw_actions = local_fallback_extract(text).get("actions", [])
+
     enriched_actions = []
-    for action in result.get("actions", []):
+    for action in raw_actions:
         enriched_actions.append(enrich_action_with_rules(action, order_date))
+
+    if not enriched_actions:
+        enriched_actions = local_fallback_extract(text).get("actions", [])
 
     result["actions"] = enriched_actions
     return result

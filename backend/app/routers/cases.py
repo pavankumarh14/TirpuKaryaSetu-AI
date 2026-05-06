@@ -3,16 +3,45 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import Action, Case, CaseStatus, Extraction
 from app.schemas import Case as CaseSchema
+from app.schemas import CaseListItem as CaseListItemSchema
 from app.services.ai_pipeline import run_ai_extraction
 from app.services.audit import create_audit_log
 from app.services.pdf_ingest import ingest_pdf, save_uploaded_pdf
 
 router = APIRouter()
+
+
+def _normalize_risk_level(value):
+    if value is None:
+        return "medium"
+    normalized = str(value).strip().lower()
+    mapping = {
+        "low": "low",
+        "medium": "medium",
+        "med": "medium",
+        "moderate": "medium",
+        "high": "high",
+        "critical": "critical",
+    }
+    return mapping.get(normalized, "medium")
+
+
+def _normalize_confidence(value):
+    try:
+        parsed = float(value)
+        if parsed < 0:
+            return 0.0
+        if parsed > 1:
+            return 1.0
+        return parsed
+    except Exception:
+        return 0.0
 
 
 @router.post("/upload", response_model=CaseSchema)
@@ -39,9 +68,10 @@ async def upload_case(file: UploadFile = File(...), db: Session = Depends(get_db
     return case
 
 
-@router.get("/", response_model=List[CaseSchema])
+@router.get("", response_model=List[CaseListItemSchema])
+@router.get("/", response_model=List[CaseListItemSchema])
 def list_cases(db: Session = Depends(get_db)):
-    cases = db.query(Case).options(joinedload(Case.actions)).order_by(Case.id.asc()).all()
+    cases = db.query(Case).order_by(Case.id.asc()).all()
     return cases
 
 
@@ -159,7 +189,7 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
 
         action = Action(
             case_id=case.id,
-            action_text=item.get("action_text", ""),
+            action_text=item.get("action_text") or "Manual review action",
             # Gap 1: Kannada translation
             action_text_kn=item.get("action_text_kn"),
             action_type=item.get("action_type"),
@@ -169,7 +199,7 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
             deadline=deadline,
             # Gap 3: store textual deadline expression for display
             deadline_expression=item.get("deadline_expression"),
-            risk_level=item.get("risk_level", "medium"),
+            risk_level=_normalize_risk_level(item.get("risk_level", "medium")),
             recommendation=item.get("recommendation"),
             appeal_recommendation=item.get("appeal_recommendation"),
             limitation_period=item.get("limitation_period"),
@@ -178,15 +208,21 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
             appeal_window_days=item.get("appeal_window_days"),
             appeal_window_expression=item.get("appeal_window_expression"),
             contempt_risk=item.get("contempt_risk", False),
-            confidence=item.get("confidence", 0.0),
-            source_evidence=item.get("source_evidence", ""),
+            confidence=_normalize_confidence(item.get("confidence", 0.0)),
+            source_evidence=item.get("source_evidence") or (item.get("action_text") or "No source evidence"),
             # Gap 5: store source page
             source_page=item.get("source_page"),
         )
         db.add(action)
 
     case.status = CaseStatus.PENDING_REVIEW
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        case.status = CaseStatus.PENDING
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Failed to save extracted actions: {str(e)}")
     db.refresh(case)
 
     create_audit_log(

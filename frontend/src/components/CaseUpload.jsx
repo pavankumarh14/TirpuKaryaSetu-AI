@@ -37,11 +37,12 @@ export default function CaseUpload({ onUploaded, lang = "en" }) {
 
     try {
       const data = await uploadCase(file);
-      const successMessage = (t.upload_success || "Case #{id} uploaded successfully!").replace("{id}", data.id);
+      const successMessage = (t.upload_success || "Judgment uploaded successfully.")
+        .replace("{case_number}", data?.case_number || file?.name || "");
       setMessage(successMessage);
       window.alert(successMessage);
       setFile(null);
-      onUploaded?.();
+      await onUploaded?.(data);
     } catch (error) {
       setMessage(`❌ ${t.error || "Error"}: ${error.message}`);
     } finally {
@@ -55,10 +56,11 @@ export default function CaseUpload({ onUploaded, lang = "en" }) {
 
     try {
       const data = await importCcmsCase(ccmsCaseId);
-      const successMessage = (t.ccms_import_success || "CCMS case #{id} imported successfully.").replace("{id}", data.id);
+      const successMessage = (t.ccms_import_success || "CCMS judgment imported successfully.")
+        .replace("{case_number}", data?.case_number || ccmsCaseId);
       setMessage(successMessage);
       window.alert(successMessage);
-      onUploaded?.();
+      await onUploaded?.(data);
     } catch (error) {
       setMessage(`${t.error || "Error"}: ${error.message}`);
     } finally {

@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-1.5-flash"
     EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_TIMEOUT_SECONDS: int = 90
+    GEMINI_MAX_RETRIES: int = 2
 
     UPLOAD_DIR: str = "./uploads"
     STATIC_DIR: str = "./static"

@@ -4,6 +4,10 @@
   "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
   "cases": "ಪ್ರಕರಣಗಳು",
   "review_queue": "ಪರಿಶೀಲನಾ ಸಾಲು",
+  "tab_dashboard_hint": "ದೃಢೀಕೃತ ಸಾರಾಂಶ",
+  "tab_cases_hint": "ಪ್ರಕರಣ ವಿವರ + ಕ್ರಮಗಳು",
+  "tab_review_hint": "ಅಧಿಕಾರಿ ಪರಿಶೀಲನೆ",
+  "tab_upload_hint": "ತೀರ್ಪು ಅಪ್‌ಲೋಡ್ ಅಥವಾ ಆಮದು",
   "upload_proof": "ಸಾಕ್ಷ್ಯ ಅಪ್‌ಲೋಡ್",
   "upload_judgment_order": "ತೀರ್ಪು ಆದೇಶ ಅಪ್‌ಲೋಡ್",
   "run_extraction": "AI ವಿಶ್ಲೇಷಣೆ ನಡೆಸಿ",
@@ -82,6 +86,7 @@
   "action_id": "ಕ್ರಮ #{id}",
   "case_action_label": "ಪ್ರಕರಣ #{caseId} / ಕ್ರಮ #{actionId}",
   "record_id": "ದಾಖಲೆ ID",
+  "added_on": "ಸೇರಿಸಿದ ಸಮಯ",
   "action_type": "ಕ್ರಮ ಪ್ರಕಾರ",
   "responsible_authority": "ಜವಾಬ್ದಾರಿ ಪ್ರಾಧಿಕಾರ",
   "nature_of_action": "ಕ್ರಮದ ಸ್ವರೂಪ",
@@ -142,7 +147,7 @@
   "supporting_document": "ಬೆಂಬಲ ದಾಖಲೆ",
   "upload": "ಅಪ್‌ಲೋಡ್",
   "upload_pdf": "PDF ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
-  "upload_success": "ಪ್ರಕರಣ #{id} ಯಶಸ್ವಿಯಾಗಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!",
+  "upload_success": "ತೀರ್ಪು ಯಶಸ್ವಿಯಾಗಿ ಅಪ್‌ಲೋಡ್ ಆಗಿದೆ: {case_number}",
   "proof_upload_success": "ಸಾಕ್ಷ್ಯ ಯಶಸ್ವಿಯಾಗಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ.",
   "upload_failed": "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ",
   "select_pdf": "ದಯವಿಟ್ಟು PDF ಫೈಲ್ ಅನ್ನು ಆಯ್ಕೆಮಾಡಿ",
@@ -154,7 +159,7 @@
   "no_ccms_cases": "ಆಮದು ಮಾಡಲು ಯಾವುದೇ ವಿಲೇವಾರಿ CCMS/CIS ಪ್ರಕರಣಗಳು ಲಭ್ಯವಿಲ್ಲ.",
   "import_judgment": "ಆಮದು",
   "importing": "ಆಮದು ಮಾಡಲಾಗುತ್ತಿದೆ...",
-  "ccms_import_success": "CCMS ಪ್ರಕರಣ #{id} ಯಶಸ್ವಿಯಾಗಿ ಆಮದು ಮಾಡಲಾಗಿದೆ.",
+  "ccms_import_success": "CCMS ತೀರ್ಪು ಯಶಸ್ವಿಯಾಗಿ ಆಮದು ಆಗಿದೆ: {case_number}",
 
   "pending_extraction": "ವಿಶ್ಲೇಷಣೆ ಬಾಕಿ"
 }
