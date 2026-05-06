@@ -1,7 +1,8 @@
 # backend/app/config.py
 
 import os
-from typing import List
+import json
+from typing import Any, List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,13 +24,8 @@ class Settings(BaseSettings):
     STATIC_DIR: str = "./static"
     MAX_FILE_SIZE_MB: int = 50
 
-    # CORS origins - default values
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://tirpukaryasetu.onrender.com",
-        "https://tirpukaryasetu-ai.onrender.com"
-    ]
+    # Accept JSON list or comma-separated env var; normalized after Settings loads.
+    ALLOWED_ORIGINS: Any = None
 
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
@@ -41,26 +37,40 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
-def get_allowed_origins() -> List[str]:
+DEFAULT_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://tirpukaryasetu.onrender.com",
+    "https://tirpukaryasetu-ai.onrender.com",
+]
+
+
+def get_allowed_origins(value: Any = None) -> List[str]:
     """Get CORS origins from environment or use defaults.
     
-    Supports comma-separated string in ALLOWED_ORIGINS env var.
+    Supports JSON lists and comma-separated strings in ALLOWED_ORIGINS.
     """
-    env_origins = os.getenv("ALLOWED_ORIGINS")
-    if env_origins:
-        if "," in env_origins:
-            return [origin.strip() for origin in env_origins.split(",")]
-        else:
-            return [env_origins.strip()]
-    
-    return [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://tirpukaryasetu.onrender.com",
-        "https://tirpukaryasetu-ai.onrender.com"
-    ]
+    origins = value if value is not None else os.getenv("ALLOWED_ORIGINS")
+
+    if origins is None or origins == "":
+        return DEFAULT_ALLOWED_ORIGINS
+
+    if isinstance(origins, list):
+        return [str(origin).strip() for origin in origins if str(origin).strip()]
+
+    if isinstance(origins, str):
+        stripped = origins.strip()
+        if stripped.startswith("["):
+            try:
+                parsed = json.loads(stripped)
+                if isinstance(parsed, list):
+                    return [str(origin).strip() for origin in parsed if str(origin).strip()]
+            except json.JSONDecodeError:
+                pass
+        return [origin.strip() for origin in stripped.split(",") if origin.strip()]
+
+    return DEFAULT_ALLOWED_ORIGINS
 
 
 settings = Settings()
-# Override ALLOWED_ORIGINS with env var if provided
-settings.ALLOWED_ORIGINS = get_allowed_origins()
+settings.ALLOWED_ORIGINS = get_allowed_origins(settings.ALLOWED_ORIGINS)
