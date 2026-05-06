@@ -24,7 +24,7 @@ function daysUntil(dateStr) {
 }
 
 // Fix: Complete bilingual support with lang prop
-export default function ActionCard({ action, onRefresh, lang = "en" }) {
+export default function ActionCard({ action, actionNumber, onRefresh, lang = "en" }) {
   const t = lang === "kn" ? kn : en;
 
   const handleComplete = async () => {
@@ -51,9 +51,12 @@ export default function ActionCard({ action, onRefresh, lang = "en" }) {
   return (
     <div style={styles.card}>
       <div style={styles.row}>
-        <strong>{t.action_id.replace("{id}", action.id)}</strong>
+        <strong>{t.action_id.replace("{id}", actionNumber || action.id)}</strong>
         <span style={{ ...styles.status, background: statusColor(action.status) }}>{statusText}</span>
       </div>
+      {actionNumber && (
+        <div style={styles.dbRef}>{t.record_id || "Record ID"}: {action.id}</div>
+      )}
 
       {/* English action text */}
       <p style={styles.text}>{action.action_text}</p>
@@ -68,6 +71,9 @@ export default function ActionCard({ action, onRefresh, lang = "en" }) {
 
       <div style={styles.grid}>
         <Info label={t.owner_department} value={action.owner_department} />
+        <Info label={t.action_type || "Action Type"} value={action.action_type} />
+        <Info label={t.responsible_authority || "Responsible Authority"} value={action.responsible_authority} />
+        <Info label={t.nature_of_action || "Nature of Action"} value={action.nature_of_action} />
 
         {/* Deadline with countdown timer */}
         <div style={styles.infoCell}>
@@ -84,6 +90,12 @@ export default function ActionCard({ action, onRefresh, lang = "en" }) {
 
         <Info label={t.risk_level} value={action.risk_level} />
         <Info label={t.assigned_to} value={action.assigned_to} />
+        <Info label={t.appeal_recommendation || "Appeal Recommendation"} value={action.appeal_recommendation} />
+        <Info label={t.limitation_period || "Limitation Period"} value={action.limitation_period} />
+        <Info
+          label={t.proof_status || "Proof Status"}
+          value={action.proof_attached ? (t.proof_attached || "Attached") : (t.proof_not_attached || "Not attached")}
+        />
 
         {/* Confidence with human-readable label */}
         <div style={styles.infoCell}>
@@ -114,7 +126,7 @@ export default function ActionCard({ action, onRefresh, lang = "en" }) {
           {action.source_evidence || t.no_source_evidence}
         </div>
         {action.source_page && (
-          <div style={{ marginTop: "4px", fontSize: "11px", color: "#6b7280" }}>📄 {t.page} {action.source_page}</div>
+          <div style={{ marginTop: "4px", fontSize: "11px", color: "#6b7280" }}>{t.page} {action.source_page}</div>
         )}
       </div>
 
@@ -176,6 +188,12 @@ const styles = {
     color: "#111827",
     marginBottom: "8px",
     lineHeight: 1.5,
+  },
+  dbRef: {
+    color: "#64748b",
+    fontSize: "11px",
+    marginTop: "-4px",
+    marginBottom: "8px",
   },
   // Kannada text style
   kannadaText: {

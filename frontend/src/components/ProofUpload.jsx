@@ -6,23 +6,30 @@ import en from "../locales/en.json";
 import kn from "../locales/kn.json";
 
 // Fix: Complete bilingual support with lang prop
-export default function ProofUpload({ caseId, onUploaded, lang = "en" }) {
+export default function ProofUpload({ caseId, actions = [], onUploaded, lang = "en" }) {
   const [file, setFile] = useState(null);
   const [proofType, setProofType] = useState("compliance_report");
   const [uploadedBy, setUploadedBy] = useState("Officer");
+  const [selectedActionId, setSelectedActionId] = useState("");
+  const [message, setMessage] = useState("");
   
   const t = lang === "kn" ? kn : en;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file || !caseId) return;
+    setMessage("");
 
     try {
-      await uploadProof(caseId, file, proofType, uploadedBy);
+      await uploadProof(caseId, file, proofType, uploadedBy, selectedActionId);
+      const successMessage = t.proof_upload_success || "Proof uploaded successfully.";
+      setMessage(successMessage);
+      window.alert(successMessage);
       setFile(null);
       onUploaded?.();
     } catch (error) {
       console.error("Proof upload failed", error);
+      setMessage(error?.message || t.upload_failed || "Upload failed");
     }
   };
 
@@ -50,6 +57,21 @@ export default function ProofUpload({ caseId, onUploaded, lang = "en" }) {
         placeholder={t.uploaded_by || "Uploaded by"}
       />
 
+      {actions.length > 0 && (
+        <select
+          value={selectedActionId}
+          onChange={(e) => setSelectedActionId(e.target.value)}
+          style={styles.input}
+        >
+          <option value="">{t.select_completed_action || "Select completed action"}</option>
+          {actions.map((action) => (
+            <option key={action.id} value={action.id}>
+              {t.action_id.replace("{id}", action.caseActionNumber || action.id)}
+            </option>
+          ))}
+        </select>
+      )}
+
       <input
         style={styles.input}
         type="file"
@@ -59,6 +81,8 @@ export default function ProofUpload({ caseId, onUploaded, lang = "en" }) {
       <button style={styles.button} type="submit">
         {t.upload}
       </button>
+
+      {message && <p style={styles.message}>{message}</p>}
     </form>
   );
 }
@@ -82,5 +106,10 @@ const styles = {
     padding: "10px 14px",
     borderRadius: "8px",
     cursor: "pointer",
+  },
+  message: {
+    margin: 0,
+    fontSize: "14px",
+    color: "#334155",
   },
 };

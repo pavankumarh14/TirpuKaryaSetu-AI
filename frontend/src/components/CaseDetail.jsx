@@ -65,6 +65,10 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
 
   const hasActions = caseItem.actions?.length > 0;
   const hasCompleted = caseItem.actions?.some((a) => a.status === "completed");
+  const orderedActions = [...(caseItem.actions || [])].sort((a, b) => a.id - b.id);
+  const completedActions = orderedActions
+    .map((action, index) => ({ ...action, caseActionNumber: index + 1 }))
+    .filter((a) => a.status === "completed");
 
   // Appeal window for contempt-risk actions
   const contemptActions = caseItem.actions?.filter(
@@ -131,7 +135,9 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
         <Info label={t.court_name} value={caseItem.court_name} />
         <Info label={t.court_type} value={caseItem.court_type} />
         <Info label={t.judgment_type} value={caseItem.judgment_type} />
+        <Info label={t.bench_judge || "Bench / Judge"} value={caseItem.bench_judge} />
         <Info label={t.petitioner} value={caseItem.petitioner} />
+        <Info label={t.respondent_name || "Respondent"} value={caseItem.respondent_name} />
         <Info label={t.department} value={caseItem.respondent_department} />
         <Info label={t.language} value={caseItem.language} />
         <Info label={t.status} value={t.lowercase?.[caseItem.status] || caseItem.status} />
@@ -176,10 +182,11 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
           <p style={styles.empty}>{t.no_extracted_actions}</p>
         ) : (
           <div style={styles.actions}>
-            {caseItem.actions.map((action) => (
+            {orderedActions.map((action, index) => (
               <ActionCard
                 key={action.id}
                 action={action}
+                actionNumber={index + 1}
                 lang={lang}
                 onRefresh={async () => {
                   const updated = await getCase(caseItem.id);
@@ -195,7 +202,16 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
       {hasCompleted && (
         <section style={styles.section}>
           <h3>{t.proof_upload}</h3>
-          <ProofUpload caseId={caseItem.id} lang={lang} onUploaded={onRefresh} />
+          <ProofUpload
+            caseId={caseItem.id}
+            actions={completedActions}
+            lang={lang}
+            onUploaded={async () => {
+              const updated = await getCase(caseItem.id);
+              onSelectCase?.(updated);
+              onRefresh?.();
+            }}
+          />
         </section>
       )}
 

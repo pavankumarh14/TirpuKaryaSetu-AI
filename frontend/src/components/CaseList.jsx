@@ -6,6 +6,7 @@ import kn from "../locales/kn.json";
 // Fix: Complete bilingual support with lang prop
 export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh, lang = "en" }) {
   const t = lang === "kn" ? kn : en;
+  const orderedCases = [...(cases || [])].sort((a, b) => a.id - b.id);
 
   return (
     <div style={styles.panel}>
@@ -17,11 +18,11 @@ export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh,
         <button style={styles.btn} onClick={onRefresh}>{t.refresh}</button>
       </div>
 
-      {!cases?.length ? (
+      {!orderedCases.length ? (
         <p style={styles.empty}>{t.no_cases || "No cases available yet."}</p>
       ) : (
         <div style={styles.list}>
-          {cases.map((item) => (
+          {orderedCases.map((item) => (
             <button
               key={item.id}
               onClick={() => onSelectCase(item)}

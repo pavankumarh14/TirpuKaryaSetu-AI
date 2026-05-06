@@ -18,7 +18,7 @@ router = APIRouter()
 def get_review_queue(db: Session = Depends(get_db)):
     actions = (
         db.query(Action)
-        .filter(Action.status.in_([ActionStatus.PENDING, ActionStatus.EDITED, ActionStatus.ASSIGNED]))
+        .filter(Action.status.in_([ActionStatus.PENDING, ActionStatus.EDITED]))
         .order_by(Action.created_at.asc())
         .all()
     )
@@ -37,6 +37,7 @@ def submit_review(
         raise HTTPException(status_code=404, detail="Action not found")
 
     review = Review(
+        case_id=action.case_id,
         action_id=action.id,
         reviewer_name=payload.reviewer_name,
         reviewer_role=payload.reviewer_role,
@@ -69,10 +70,15 @@ def submit_review(
                 edited = json.loads(payload.edited_fields)
                 editable_fields = {
                     "action_text",
+                    "action_type",
+                    "responsible_authority",
+                    "nature_of_action",
                     "owner_department",
                     "deadline",
                     "risk_level",
                     "recommendation",
+                    "appeal_recommendation",
+                    "limitation_period",
                     "assigned_to",
                     "appeal_window",
                     "contempt_risk",
@@ -95,7 +101,6 @@ def submit_review(
             status in {
                 ActionStatus.APPROVED,
                 ActionStatus.ASSIGNED,
-                ActionStatus.EDITED,
                 ActionStatus.COMPLETED,
             }
             for status in action_statuses

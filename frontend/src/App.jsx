@@ -28,7 +28,11 @@ export default function App() {
         getDashboardStats(),
         getReviewQueue(),
       ]);
-      setCases(casesData || []);
+      const orderedCases = [...(casesData || [])].sort((a, b) => a.id - b.id);
+      setCases(orderedCases);
+      setSelectedCase((current) =>
+        current ? orderedCases.find((item) => item.id === current.id) || current : current
+      );
       setStats(statsData || null);
       setReviewQueue(queueData || []);
     } catch (error) {
@@ -46,7 +50,7 @@ export default function App() {
     { id: "dashboard", label: t.dashboard || "Dashboard" },
     { id: "cases", label: t.cases || "Cases" },
     { id: "review", label: t.review_queue || "Review Queue" },
-    { id: "upload", label: t.upload_proof || "Upload" },
+    { id: "upload", label: t.upload_judgment_order || "Upload Judgment Order" },
   ];
 
   return (

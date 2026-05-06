@@ -22,10 +22,17 @@ def ensure_schema_compatibility(engine):
             "extracted_text": "TEXT",
             "ocr_text": "TEXT",
             "received_date": "TIMESTAMP",
+            "respondent_name": "VARCHAR",
+            "bench_judge": "VARCHAR",
         },
         "actions": {
             "action_text_kn": "TEXT",
+            "action_type": "VARCHAR",
+            "responsible_authority": "VARCHAR",
+            "nature_of_action": "VARCHAR",
             "deadline_expression": "VARCHAR",
+            "appeal_recommendation": "TEXT",
+            "limitation_period": "VARCHAR",
             "assigned_to": "VARCHAR",
             "appeal_window": "TIMESTAMP",
             "appeal_window_days": "INTEGER",
@@ -36,6 +43,9 @@ def ensure_schema_compatibility(engine):
         "extractions": {
             "source_page": "INTEGER",
             "source_text_span": "TEXT",
+        },
+        "reviews": {
+            "case_id": "INTEGER",
         },
         "proofs": {
             "document_type": "VARCHAR",

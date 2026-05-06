@@ -50,7 +50,9 @@ class Case(Base):
     order_date = Column(DateTime, nullable=True)
     judgment_type = Column(String, nullable=True)
     petitioner = Column(String, nullable=True)
+    respondent_name = Column(String, nullable=True)
     respondent_department = Column(String, nullable=True)
+    bench_judge = Column(String, nullable=True)
     disposal_status = Column(String, nullable=True)
     language = Column(String, default="en")
     status = Column(Enum(CaseStatus), default=CaseStatus.PENDING)
@@ -61,10 +63,11 @@ class Case(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
 
-    actions = relationship("Action", back_populates="case", cascade="all, delete-orphan")
+    actions = relationship("Action", back_populates="case", cascade="all, delete-orphan", order_by="Action.id")
     extractions = relationship("Extraction", back_populates="case", cascade="all, delete-orphan")
     reviews = relationship("Review", back_populates="case", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="case", cascade="all, delete-orphan")
+    proofs = relationship("Proof", back_populates="case", cascade="all, delete-orphan")
 
 
 class Action(Base):
@@ -75,11 +78,16 @@ class Action(Base):
     action_text = Column(Text, nullable=False)
     # Gap 1: Bilingual Kannada support
     action_text_kn = Column(Text, nullable=True)  # Kannada translation of action
+    action_type = Column(String, nullable=True)
+    responsible_authority = Column(String, nullable=True)
+    nature_of_action = Column(String, nullable=True)
     owner_department = Column(String, nullable=True)
     deadline = Column(DateTime, nullable=True)
     deadline_expression = Column(String, nullable=True)  # raw textual expression e.g. "within 8 weeks"
     risk_level = Column(Enum(RiskLevel), default=RiskLevel.MEDIUM)
     recommendation = Column(Text, nullable=True)
+    appeal_recommendation = Column(Text, nullable=True)
+    limitation_period = Column(String, nullable=True)
     status = Column(Enum(ActionStatus), default=ActionStatus.PENDING)
     assigned_to = Column(String, nullable=True)
     appeal_window = Column(DateTime, nullable=True)
@@ -94,6 +102,11 @@ class Action(Base):
 
     case = relationship("Case", back_populates="actions")
     reviews = relationship("Review", back_populates="action", cascade="all, delete-orphan")
+    proofs = relationship("Proof", back_populates="action")
+
+    @property
+    def proof_attached(self) -> bool:
+        return bool(self.proofs)
 
 
 class Extraction(Base):
@@ -138,6 +151,9 @@ class Proof(Base):
     document_type = Column(String, nullable=True)
     uploaded_by = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+
+    case = relationship("Case", back_populates="proofs")
+    action = relationship("Action", back_populates="proofs")
 
 
 class AuditLog(Base):

@@ -9,6 +9,7 @@ import kn from "../locales/kn.json";
 export default function ReviewPanel({ queue, onRefresh, lang = "en" }) {
   const [notes, setNotes] = useState({});
   const [assignments, setAssignments] = useState({});
+  const [message, setMessage] = useState("");
   
   const t = lang === "kn" ? kn : en;
 
@@ -27,9 +28,11 @@ export default function ReviewPanel({ queue, onRefresh, lang = "en" }) {
         notes: notes[actionId] || "",
       });
 
+      setMessage(t.review_saved || "Review saved successfully.");
       onRefresh?.();
     } catch (error) {
       console.error("Review submission failed", error);
+      setMessage(error?.message || t.review_failed || "Review submission failed.");
     }
   };
 
@@ -40,6 +43,7 @@ export default function ReviewPanel({ queue, onRefresh, lang = "en" }) {
     <div style={styles.panel}>
       <h2 style={styles.heading}>{t.officer_review_queue}</h2>
       <p style={styles.subtext}>{t.review_queue_subtext}</p>
+      {message && <p style={styles.message}>{message}</p>}
 
       {!queue?.length ? (
         <p style={styles.empty}>{t.no_actions_pending}</p>
@@ -48,7 +52,7 @@ export default function ReviewPanel({ queue, onRefresh, lang = "en" }) {
           {queue.map((action) => (
             <div key={action.id} style={styles.card}>
               <div style={styles.row}>
-                <strong>{t.action_id.replace("{id}", action.id)}</strong>
+                <strong>{t.case_action_label?.replace("{caseId}", action.case_id).replace("{actionId}", action.id) || `Case #${action.case_id} / Action #${action.id}`}</strong>
                 <span style={styles.status}>{getStatusText(action.status)}</span>
               </div>
 
@@ -64,9 +68,15 @@ export default function ReviewPanel({ queue, onRefresh, lang = "en" }) {
 
               <div style={styles.metaGrid}>
                 <Meta label={t.owner_department} value={action.owner_department} />
+                <Meta label={t.action_type || "Action Type"} value={action.action_type} />
+                <Meta label={t.responsible_authority || "Responsible Authority"} value={action.responsible_authority} />
+                <Meta label={t.nature_of_action || "Nature of Action"} value={action.nature_of_action} />
                 <Meta label={t.risk_level} value={action.risk_level} />
                 <Meta label={t.confidence} value={`${Math.round((action.confidence || 0) * 100)}%`} />
                 <Meta label={t.assigned_to} value={action.assigned_to} />
+                <Meta label={t.appeal_recommendation || "Appeal Recommendation"} value={action.appeal_recommendation} />
+                <Meta label={t.limitation_period || "Limitation Period"} value={action.limitation_period} />
+                <Meta label={t.source_page} value={action.source_page ? `${t.page} ${action.source_page}` : null} />
               </div>
 
               <div style={styles.evidence}>
@@ -133,6 +143,13 @@ const styles = {
   heading: { marginTop: 0 },
   subtext: { color: "#64748b", marginBottom: "20px" },
   empty: { color: "#64748b" },
+  message: {
+    background: "#ecfdf5",
+    border: "1px solid #86efac",
+    borderRadius: "8px",
+    color: "#166534",
+    padding: "10px 12px",
+  },
   list: { display: "flex", flexDirection: "column", gap: "16px" },
   card: {
     border: "1px solid #e2e8f0",

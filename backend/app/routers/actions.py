@@ -50,10 +50,15 @@ def update_action(
 
     allowed_fields = {
         "action_text",
+        "action_type",
+        "responsible_authority",
+        "nature_of_action",
         "owner_department",
         "deadline",
         "risk_level",
         "recommendation",
+        "appeal_recommendation",
+        "limitation_period",
         "status",
         "assigned_to",
         "appeal_window",

@@ -41,7 +41,7 @@ async def upload_case(file: UploadFile = File(...), db: Session = Depends(get_db
 
 @router.get("/", response_model=List[CaseSchema])
 def list_cases(db: Session = Depends(get_db)):
-    cases = db.query(Case).options(joinedload(Case.actions)).all()
+    cases = db.query(Case).options(joinedload(Case.actions)).order_by(Case.id.asc()).all()
     return cases
 
 
@@ -89,8 +89,12 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
         case.judgment_type = meta["judgment_type"]
     if meta.get("petitioner"):
         case.petitioner = meta["petitioner"]
+    if meta.get("respondent_name"):
+        case.respondent_name = meta["respondent_name"]
     if meta.get("respondent_department"):
         case.respondent_department = meta["respondent_department"]
+    if meta.get("bench_judge"):
+        case.bench_judge = meta["bench_judge"]
     if meta.get("disposal_status"):
         case.disposal_status = meta["disposal_status"]
     if meta.get("language"):
@@ -130,12 +134,17 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
             action_text=item.get("action_text", ""),
             # Gap 1: Kannada translation
             action_text_kn=item.get("action_text_kn"),
+            action_type=item.get("action_type"),
+            responsible_authority=item.get("responsible_authority"),
+            nature_of_action=item.get("nature_of_action"),
             owner_department=item.get("owner_department"),
             deadline=deadline,
             # Gap 3: store textual deadline expression for display
             deadline_expression=item.get("deadline_expression"),
             risk_level=item.get("risk_level", "medium"),
             recommendation=item.get("recommendation"),
+            appeal_recommendation=item.get("appeal_recommendation"),
+            limitation_period=item.get("limitation_period"),
             appeal_window=appeal_window,
             # Gap 6: store appeal window fields
             appeal_window_days=item.get("appeal_window_days"),

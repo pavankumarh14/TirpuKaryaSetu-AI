@@ -82,10 +82,15 @@ def local_fallback_extract(text: str) -> Dict:
             {
                 "action_text": sentence[:300],
                 "action_text_kn": None,  # Will be null - frontend will hide when null
+                "action_type": "compliance",
+                "responsible_authority": None,
+                "nature_of_action": "Court direction compliance",
                 "owner_department": None,
                 "deadline_expression": deadline_expression,
                 "risk_level": "medium",
                 "recommendation": "Officer should verify and assign this direction for compliance.",
+                "appeal_recommendation": "Officer should verify whether appeal is required before compliance deadline.",
+                "limitation_period": None,
                 "appeal_window_expression": None,
                 "contempt_risk": False,
                 "confidence": 0.68,
@@ -101,7 +106,9 @@ def local_fallback_extract(text: str) -> Dict:
             "order_date": datetime.utcnow().isoformat(),
             "judgment_type": "compliance",
             "petitioner": None,
+            "respondent_name": None,
             "respondent_department": None,
+            "bench_judge": None,
             "disposal_status": "disposed" if "disposed" in text.lower() else None,
             "language": "kn" if any("\u0c80" <= ch <= "\u0cff" for ch in text) else "en",
         },
@@ -148,6 +155,11 @@ Judgment text chunks:
         for action in result["actions"]:
             if "action_text_kn" not in action:
                 action["action_text_kn"] = None
+            action.setdefault("action_type", None)
+            action.setdefault("responsible_authority", None)
+            action.setdefault("nature_of_action", None)
+            action.setdefault("appeal_recommendation", None)
+            action.setdefault("limitation_period", None)
     
     return result
 

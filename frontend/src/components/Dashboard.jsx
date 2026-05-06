@@ -1,6 +1,6 @@
 // frontend/src/components/Dashboard.jsx
 import { useState, useEffect } from "react";
-import { getDepartmentWorkload } from "../services/api";
+import { getDepartmentWorkload, getTrustedActions } from "../services/api";
 import en from "../locales/en.json";
 import kn from "../locales/kn.json";
 
@@ -8,6 +8,7 @@ import kn from "../locales/kn.json";
 export default function Dashboard({ stats, reviewQueue, onRefresh, lang = "en" }) {
   const [showAll, setShowAll] = useState(false);
   const [workload, setWorkload] = useState([]);
+  const [trustedActions, setTrustedActions] = useState([]);
   const [workloadError, setWorkloadError] = useState(null);
   const t = lang === "kn" ? kn : en;
 
@@ -16,14 +17,17 @@ export default function Dashboard({ stats, reviewQueue, onRefresh, lang = "en" }
     getDepartmentWorkload()
       .then((data) => setWorkload(Array.isArray(data) ? data : data?.workload || []))
       .catch(() => setWorkloadError("Could not load department workload"));
-  }, []);
+    getTrustedActions()
+      .then((data) => setTrustedActions(Array.isArray(data) ? data : []))
+      .catch(() => setTrustedActions([]));
+  }, [stats]);
 
   // Fix: Use translation keys for card labels
   const cards = [
     { label: t.total_cases, value: stats?.total_cases ?? 0 },
     { label: t.pending_cases, value: stats?.pending_cases ?? 0 },
     { label: t.verified_cases, value: stats?.verified_cases ?? 0 },
-    { label: t.total_actions, value: stats?.total_actions ?? 0 },
+    { label: t.verified_action_plans || t.total_actions, value: stats?.total_actions ?? 0 },
     { label: t.pending_actions, value: stats?.pending_actions ?? 0 },
     { label: t.high_risk_actions, value: stats?.high_risk_actions ?? 0 },
     { label: t.contempt_risk_count, value: stats?.contempt_risk_count ?? 0 },
@@ -70,14 +74,38 @@ export default function Dashboard({ stats, reviewQueue, onRefresh, lang = "en" }
                 <div style={styles.deptMeta}>
                   {/* Fix: Translated badges */}
                   <span style={styles.deptBadge}>
-                    {dept.pending_actions ?? dept.count ?? 0} {t.pending}
+                    {dept.approved ?? 0} {t.approved || "approved"}
                   </span>
-                  {dept.high_risk > 0 && (
-                    <span style={{ ...styles.deptBadge, background: "#fee2e2", color: "#b91c1c" }}>
-                      {dept.high_risk} {t.high_risk_lower}
-                    </span>
-                  )}
+                  <span style={styles.deptBadge}>
+                    {dept.completed ?? 0} {t.completed}
+                  </span>
                 </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div style={{ ...styles.panel, marginTop: "16px" }}>
+        <div style={styles.panelHeader}>
+          <h3 style={styles.panelTitle}>{t.verified_action_plans || "Verified Action Plans"}</h3>
+          {trustedActions.length > 0 && (
+            <span style={styles.countBadge}>{t.actions_count.replace("{count}", trustedActions.length)}</span>
+          )}
+        </div>
+
+        {!trustedActions.length ? (
+          <p style={styles.empty}>{t.no_verified_actions || "No approved action plans yet."}</p>
+        ) : (
+          <ul style={styles.list}>
+            {trustedActions.slice(0, 8).map((item) => (
+              <li key={item.id} style={styles.listItem}>
+                <div>
+                  <strong>{t.case_action_label?.replace("{caseId}", item.case_id).replace("{actionId}", item.id) || `Case #${item.case_id} / Action #${item.id}`}</strong>
+                  <div style={styles.meta}>{item.action_text}</div>
+                  <div style={styles.meta}>{item.owner_department || t.department}</div>
+                </div>
+                <span style={styles.badge}>{t.lowercase?.[item.status] || item.status}</span>
               </li>
             ))}
           </ul>
@@ -100,7 +128,7 @@ export default function Dashboard({ stats, reviewQueue, onRefresh, lang = "en" }
               {visibleQueue.map((item) => (
                 <li key={item.id} style={styles.listItem}>
                   <div>
-                    <strong>{t.action_id.replace("{id}", item.id)}</strong>
+                    <strong>{t.case_action_label?.replace("{caseId}", item.case_id).replace("{actionId}", item.id) || `Case #${item.case_id} / Action #${item.id}`}</strong>
                     <div style={styles.meta}>{item.owner_department || t.department}</div>
                   </div>
                   {/* Fix: Translate status */}

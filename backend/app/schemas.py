@@ -32,11 +32,16 @@ class Extraction(ExtractionBase):
 class ActionBase(BaseModel):
     action_text: str
     action_text_kn: Optional[str] = None           # Gap 1: Kannada translation
+    action_type: Optional[str] = None
+    responsible_authority: Optional[str] = None
+    nature_of_action: Optional[str] = None
     owner_department: Optional[str] = None
     deadline: Optional[datetime] = None
     deadline_expression: Optional[str] = None      # raw textual deadline phrase
     risk_level: RiskLevel = RiskLevel.MEDIUM
     recommendation: Optional[str] = None
+    appeal_recommendation: Optional[str] = None
+    limitation_period: Optional[str] = None
     assigned_to: Optional[str] = None
     appeal_window: Optional[datetime] = None
     appeal_window_days: Optional[int] = None       # Gap 6: numerical countdown days
@@ -45,6 +50,7 @@ class ActionBase(BaseModel):
     confidence: float
     source_evidence: str
     source_page: Optional[int] = None             # Gap 5: page reference
+    proof_attached: bool = False
 
 
 class ActionCreate(ActionBase):
@@ -124,7 +130,9 @@ class CaseBase(BaseModel):
     order_date: Optional[datetime] = None
     judgment_type: Optional[str] = None
     petitioner: Optional[str] = None
+    respondent_name: Optional[str] = None
     respondent_department: Optional[str] = None
+    bench_judge: Optional[str] = None
     disposal_status: Optional[str] = None
     language: Optional[str] = "en"
     status: Optional[CaseStatus] = CaseStatus.PENDING

@@ -40,7 +40,9 @@ export default function CaseUpload({ onUploaded, lang = "en" }) {
       }
 
       const data = await response.json();
-      setMessage((t.upload_success || "✅ Case #{id} uploaded successfully!").replace("{id}", data.id));
+      const successMessage = (t.upload_success || "Case #{id} uploaded successfully!").replace("{id}", data.id);
+      setMessage(successMessage);
+      window.alert(successMessage);
       setFile(null);
       onUploaded?.();
     } catch (error) {
@@ -52,7 +54,7 @@ export default function CaseUpload({ onUploaded, lang = "en" }) {
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>{t.upload_case || "Upload Case"}</h3>
+      <h3 style={styles.title}>{t.upload_judgment_order || "Upload Judgment Order"}</h3>
       <div style={styles.row}>
         <input
           type="file"

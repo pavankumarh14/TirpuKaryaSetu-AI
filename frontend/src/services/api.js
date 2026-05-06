@@ -37,6 +37,10 @@ export async function getDashboardStats() {
   return request("/dashboard/stats");
 }
 
+export async function getTrustedActions() {
+  return request("/dashboard/trusted-actions");
+}
+
 // Gap 4: Department workload
 export async function getDepartmentWorkload() {
   return request("/dashboard/workload");
@@ -73,11 +77,14 @@ export async function completeAction(actionId) {
   });
 }
 
-export async function uploadProof(caseId, file, proofType, uploadedBy) {
+export async function uploadProof(caseId, file, proofType, uploadedBy, actionId) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("proof_type", proofType);
   formData.append("uploaded_by", uploadedBy);
+  if (actionId) {
+    formData.append("action_id", actionId);
+  }
 
   return request(`/proofs/upload/${caseId}`, {
     method: "POST",

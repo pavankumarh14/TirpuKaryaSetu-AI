@@ -9,9 +9,16 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Action, ActionStatus, AuditLog, Case, CaseStatus, RiskLevel
+from app.schemas import Action as ActionSchema
 from app.schemas import AuditLogOut, DashboardStats, DepartmentWorkload
 
 router = APIRouter()
+
+TRUSTED_ACTION_STATUSES = [
+    ActionStatus.APPROVED,
+    ActionStatus.ASSIGNED,
+    ActionStatus.COMPLETED,
+]
 
 
 @router.get("/stats", response_model=DashboardStats)
@@ -28,20 +35,18 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     ).count()
     verified_cases = db.query(Case).filter(Case.status == CaseStatus.VERIFIED).count()
 
-    total_actions = db.query(Action).count()
+    trusted_actions = db.query(Action).filter(Action.status.in_(TRUSTED_ACTION_STATUSES))
+    total_actions = trusted_actions.count()
     pending_actions = db.query(Action).filter(Action.status == ActionStatus.PENDING).count()
-    high_risk_actions = db.query(Action).filter(
+    high_risk_actions = trusted_actions.filter(
         Action.risk_level.in_([RiskLevel.CRITICAL, RiskLevel.HIGH])
     ).count()
-    contempt_risk_count = db.query(Action).filter(Action.contempt_risk == True).count()
+    contempt_risk_count = trusted_actions.filter(Action.contempt_risk == True).count()
 
-    # Gap 4: Also count approved actions as "verified" for dashboard stat accuracy
-    approved_actions = db.query(Action).filter(Action.status == ActionStatus.APPROVED).count()
-    # verified_cases should include cases that have at least one approved action
     cases_with_approvals = (
         db.query(Case.id)
         .join(Action)
-        .filter(Action.status == ActionStatus.APPROVED)
+        .filter(Action.status.in_(TRUSTED_ACTION_STATUSES))
         .distinct()
         .count()
     )
@@ -62,7 +67,14 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
 # Gap 4: Department-wise workload endpoint
 @router.get("/workload", response_model=List[DepartmentWorkload])
 def get_department_workload(db: Session = Depends(get_db)):
-    actions = db.query(Action).filter(Action.owner_department != None).all()
+    actions = (
+        db.query(Action)
+        .filter(
+            Action.owner_department != None,
+            Action.status.in_(TRUSTED_ACTION_STATUSES),
+        )
+        .all()
+    )
     dept_map = defaultdict(lambda: {"pending": 0, "approved": 0, "completed": 0, "total": 0})
     for action in actions:
         dept = action.owner_department or "Unknown"
@@ -100,7 +112,7 @@ def get_urgent_actions(db: Session = Depends(get_db)):
             Action.deadline != None,
             Action.deadline <= threshold,
             Action.deadline >= now,
-            Action.status.in_([ActionStatus.PENDING, ActionStatus.APPROVED, ActionStatus.ASSIGNED, ActionStatus.EDITED]),
+            Action.status.in_(TRUSTED_ACTION_STATUSES),
         )
         .order_by(Action.deadline.asc())
         .all()
@@ -114,7 +126,7 @@ def get_urgent_actions(db: Session = Depends(get_db)):
         db.query(Action)
         .filter(
             Action.risk_level.in_([RiskLevel.CRITICAL, RiskLevel.HIGH]),
-            Action.status.in_([ActionStatus.PENDING, ActionStatus.ASSIGNED, ActionStatus.EDITED]),
+            Action.status.in_(TRUSTED_ACTION_STATUSES),
         )
         .all()
     )
@@ -124,6 +136,16 @@ def get_urgent_actions(db: Session = Depends(get_db)):
             result.append(a)
 
     return result
+
+
+@router.get("/trusted-actions", response_model=List[ActionSchema])
+def get_trusted_actions(db: Session = Depends(get_db)):
+    return (
+        db.query(Action)
+        .filter(Action.status.in_(TRUSTED_ACTION_STATUSES))
+        .order_by(Action.updated_at.desc().nullslast(), Action.created_at.desc())
+        .all()
+    )
 
 
 # Gap 2: Audit Trail — get audit logs for a case
