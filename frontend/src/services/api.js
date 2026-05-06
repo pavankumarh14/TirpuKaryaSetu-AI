@@ -27,6 +27,12 @@ export async function getCase(caseId) {
   return request(`/cases/${caseId}`);
 }
 
+export async function deleteCase(caseId) {
+  return request(`/cases/${caseId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function triggerExtraction(caseId) {
   return request(`/cases/${caseId}/extract`, {
     method: "POST",

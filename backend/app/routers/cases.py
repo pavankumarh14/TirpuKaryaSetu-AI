@@ -53,6 +53,30 @@ def get_case(case_id: int, db: Session = Depends(get_db)):
     return case
 
 
+@router.delete("/{case_id}")
+def delete_case(case_id: int, db: Session = Depends(get_db)):
+    """Delete a case and all its associated data (cascade delete)."""
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # SQLAlchemy cascade will handle related actions, extractions, reviews, audit_logs
+    db.delete(case)
+    db.commit()
+    
+    create_audit_log(
+        db,
+        case_id=case_id,
+        entity_type="case",
+        entity_id=case_id,
+        event="case_deleted",
+        actor="user",
+        before_value={"case_number": case.case_number, "status": case.status.value if case.status else None},
+    )
+    
+    return {"status": "success", "message": f"Case #{case_id} deleted successfully"}
+
+
 @router.post("/{case_id}/extract")
 def extract_case(case_id: int, db: Session = Depends(get_db)):
     case = db.query(Case).filter(Case.id == case_id).first()

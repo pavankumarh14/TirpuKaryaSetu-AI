@@ -1,5 +1,6 @@
 // frontend/src/components/CaseList.jsx
 
+import { deleteCase } from "../services/api";
 import en from "../locales/en.json";
 import kn from "../locales/kn.json";
 
@@ -7,6 +8,30 @@ import kn from "../locales/kn.json";
 export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh, lang = "en" }) {
   const t = lang === "kn" ? kn : en;
   const orderedCases = [...(cases || [])].sort((a, b) => a.id - b.id);
+
+  const handleDelete = async (e, caseId) => {
+    e.stopPropagation(); // Prevent selecting the case when clicking delete
+    
+    const confirmMessage = lang === "kn" 
+      ? `प्रकरಣ #${caseId} ಅನ್ನು ಅಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿರುವಿರಾ? ಈ ಕ್ರಿಯೆಯನ್ನು ವಾಪಸ್ ತೆಗೆದುಕೊಳ್ಳಲಾಗುವುದಿಲ್ಲ.`
+      : `Are you sure you want to delete Case #${caseId}? This action cannot be undone.`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      await deleteCase(caseId);
+      // If deleted case was selected, clear selection
+      if (selectedCase?.id === caseId) {
+        onSelectCase(null);
+      }
+      onRefresh?.();
+    } catch (error) {
+      console.error("Failed to delete case:", error);
+      alert(lang === "kn" ? "ಪ್ರಕರಣವನ್ನು ಅಳಿಸುವಲ್ಲಿ ವಿಫಲವಾಗಿದೆ" : "Failed to delete case");
+    }
+  };
 
   return (
     <div style={styles.panel}>
@@ -23,20 +48,29 @@ export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh,
       ) : (
         <div style={styles.list}>
           {orderedCases.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onSelectCase(item)}
-              style={selectedCase?.id === item.id ? styles.activeItem : styles.item}
-            >
-              <div style={styles.itemTop}>
-                <strong>#{item.id}</strong>
-                {/* Fix: Translate status */}
-                <span style={styles.status}>{t.lowercase?.[item.status] || item.status}</span>
-              </div>
-              <div style={styles.caseNo}>{item.case_number || t.pending_extraction}</div>
-              <div style={styles.meta}>{item.court_name || t.pending_extraction}</div>
-              <div style={styles.meta}>{item.respondent_department || t.department}</div>
-            </button>
+            <div key={item.id} style={styles.caseWrapper}>
+              <button
+                onClick={() => onSelectCase(item)}
+                style={selectedCase?.id === item.id ? styles.activeItem : styles.item}
+              >
+                <div style={styles.itemTop}>
+                  <strong>#{item.id}</strong>
+                  {/* Fix: Translate status */}
+                  <span style={styles.status}>{t.lowercase?.[item.status] || item.status}</span>
+                </div>
+                <div style={styles.caseNo}>{item.case_number || t.pending_extraction}</div>
+                <div style={styles.meta}>{item.court_name || t.pending_extraction}</div>
+                <div style={styles.meta}>{item.respondent_department || t.department}</div>
+              </button>
+              {/* Delete button */}
+              <button
+                style={styles.deleteBtn}
+                onClick={(e) => handleDelete(e, item.id)}
+                title={lang === "kn" ? "ಪ್ರಕರಣ ಅಳಿಸಿ" : "Delete case"}
+              >
+                🗑️
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -73,7 +107,14 @@ const styles = {
     flexDirection: "column",
     gap: "12px",
   },
+  caseWrapper: {
+    position: "relative",
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "8px",
+  },
   item: {
+    flex: 1,
     border: "1px solid #e2e8f0",
     borderRadius: "10px",
     padding: "14px",
@@ -82,6 +123,7 @@ const styles = {
     cursor: "pointer",
   },
   activeItem: {
+    flex: 1,
     border: "1px solid #22c55e",
     borderRadius: "10px",
     padding: "14px",
@@ -103,4 +145,19 @@ const styles = {
   },
   caseNo: { fontWeight: 600, marginBottom: "6px" },
   meta: { fontSize: "13px", color: "#64748b", marginTop: "3px" },
+  deleteBtn: {
+    background: "#fee2e2",
+    border: "1px solid #fca5a5",
+    borderRadius: "8px",
+    padding: "8px 10px",
+    cursor: "pointer",
+    fontSize: "16px",
+    color: "#dc2626",
+    transition: "background 0.2s",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: "40px",
+    minHeight: "40px",
+  },
 };
