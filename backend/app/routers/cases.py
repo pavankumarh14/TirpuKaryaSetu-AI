@@ -70,7 +70,7 @@ def delete_case(case_id: int, db: Session = Depends(get_db)):
     
     create_audit_log(
         db,
-        case_id=case_id,
+        case_id=None,
         entity_type="case",
         entity_id=case_id,
         event="case_deleted",
