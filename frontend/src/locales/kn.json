@@ -142,6 +142,12 @@
   "error": "ದೋಷ",
   "uploaded_by": "ಅಪ್‌ಲೋಡ್ ಮಾಡಿದವರು",
   "select_completed_action": "ಪೂರ್ಣಗೊಂಡ ಕ್ರಮ ಆಯ್ಕೆಮಾಡಿ",
+  "ccms_import_title": "CCMS/CIS ನಿಂದ ಆಮದು",
+  "ccms_import_subtext": "CCMS/CIS ನಿಂದ ಬಂದ ವಿಲೇವಾರಿ ತೀರ್ಪುಗಳು ಇದೇ AI ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಪರಿಶೀಲನಾ ಕಾರ್ಯಪ್ರವಾಹಕ್ಕೆ ಸೇರುತ್ತವೆ.",
+  "no_ccms_cases": "ಆಮದು ಮಾಡಲು ಯಾವುದೇ ವಿಲೇವಾರಿ CCMS/CIS ಪ್ರಕರಣಗಳು ಲಭ್ಯವಿಲ್ಲ.",
+  "import_judgment": "ಆಮದು",
+  "importing": "ಆಮದು ಮಾಡಲಾಗುತ್ತಿದೆ...",
+  "ccms_import_success": "CCMS ಪ್ರಕರಣ #{id} ಯಶಸ್ವಿಯಾಗಿ ಆಮದು ಮಾಡಲಾಗಿದೆ.",
 
   "pending_extraction": "ವಿಶ್ಲೇಷಣೆ ಬಾಕಿ"
 }

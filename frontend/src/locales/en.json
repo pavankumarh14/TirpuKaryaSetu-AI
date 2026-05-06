@@ -142,6 +142,12 @@
   "error": "Error",
   "uploaded_by": "Uploaded by",
   "select_completed_action": "Select completed action",
+  "ccms_import_title": "Import from CCMS/CIS",
+  "ccms_import_subtext": "Disposed judgments fetched from CCMS/CIS will enter the same AI extraction and review workflow.",
+  "no_ccms_cases": "No disposed CCMS/CIS cases available.",
+  "import_judgment": "Import",
+  "importing": "Importing...",
+  "ccms_import_success": "CCMS case #{id} imported successfully.",
 
   "pending_extraction": "Pending extraction"
 }

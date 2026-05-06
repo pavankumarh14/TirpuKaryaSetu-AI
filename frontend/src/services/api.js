@@ -33,6 +33,16 @@ export async function deleteCase(caseId) {
   });
 }
 
+export async function getCcmsDisposedCases() {
+  return request("/ccms/disposed-cases");
+}
+
+export async function importCcmsCase(ccmsCaseId) {
+  return request(`/ccms/import/${encodeURIComponent(ccmsCaseId)}`, {
+    method: "POST",
+  });
+}
+
 export async function triggerExtraction(caseId) {
   return request(`/cases/${caseId}/extract`, {
     method: "POST",

@@ -9,12 +9,12 @@ export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh,
   const t = lang === "kn" ? kn : en;
   const orderedCases = [...(cases || [])].sort((a, b) => a.id - b.id);
 
-  const handleDelete = async (e, caseId) => {
+  const handleDelete = async (e, caseId, displayNumber) => {
     e.stopPropagation(); // Prevent selecting the case when clicking delete
     
     const confirmMessage = lang === "kn" 
-      ? `प्रकरಣ #${caseId} ಅನ್ನು ಅಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿರುವಿರಾ? ಈ ಕ್ರಿಯೆಯನ್ನು ವಾಪಸ್ ತೆಗೆದುಕೊಳ್ಳಲಾಗುವುದಿಲ್ಲ.`
-      : `Are you sure you want to delete Case #${caseId}? This action cannot be undone.`;
+      ? `ಪ್ರಕರಣ #${displayNumber} ಅನ್ನು ಅಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿರುವಿರಾ? ಈ ಕ್ರಿಯೆಯನ್ನು ವಾಪಸ್ ತೆಗೆದುಕೊಳ್ಳಲಾಗುವುದಿಲ್ಲ.`
+      : `Are you sure you want to delete Case #${displayNumber}? This action cannot be undone.`;
     
     if (!window.confirm(confirmMessage)) {
       return;
@@ -47,14 +47,17 @@ export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh,
         <p style={styles.empty}>{t.no_cases || "No cases available yet."}</p>
       ) : (
         <div style={styles.list}>
-          {orderedCases.map((item) => (
+          {orderedCases.map((item, index) => (
             <div key={item.id} style={styles.caseWrapper}>
               <button
                 onClick={() => onSelectCase(item)}
                 style={selectedCase?.id === item.id ? styles.activeItem : styles.item}
               >
                 <div style={styles.itemTop}>
-                  <strong>#{item.id}</strong>
+                  <div>
+                    <strong>#{index + 1}</strong>
+                    <div style={styles.recordId}>{t.record_id || "Record ID"}: {item.id}</div>
+                  </div>
                   {/* Fix: Translate status */}
                   <span style={styles.status}>{t.lowercase?.[item.status] || item.status}</span>
                 </div>
@@ -65,10 +68,10 @@ export default function CaseList({ cases, selectedCase, onSelectCase, onRefresh,
               {/* Delete button */}
               <button
                 style={styles.deleteBtn}
-                onClick={(e) => handleDelete(e, item.id)}
+                onClick={(e) => handleDelete(e, item.id, index + 1)}
                 title={lang === "kn" ? "ಪ್ರಕರಣ ಅಳಿಸಿ" : "Delete case"}
               >
-                🗑️
+                Delete
               </button>
             </div>
           ))}
@@ -144,6 +147,7 @@ const styles = {
     borderRadius: "999px",
   },
   caseNo: { fontWeight: 600, marginBottom: "6px" },
+  recordId: { fontSize: "11px", color: "#64748b", marginTop: "2px" },
   meta: { fontSize: "13px", color: "#64748b", marginTop: "3px" },
   deleteBtn: {
     background: "#fee2e2",
@@ -151,7 +155,8 @@ const styles = {
     borderRadius: "8px",
     padding: "8px 10px",
     cursor: "pointer",
-    fontSize: "16px",
+    fontSize: "12px",
+    fontWeight: 700,
     color: "#dc2626",
     transition: "background 0.2s",
     display: "flex",
