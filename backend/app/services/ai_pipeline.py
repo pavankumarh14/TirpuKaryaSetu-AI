@@ -140,7 +140,7 @@ def local_fallback_extract(text: str) -> Dict:
                 "appeal_window_expression": None,
                 "contempt_risk": False,
                 "confidence": 0.5,
-                "source_evidence": "No explicit direction sentence was automatically identified in fallback mode.",
+                "source_evidence": "Gemini extraction could not complete (timeout/quota/token/model issue). Fallback mode used; manual officer review required.",
             }
         )
 
@@ -192,7 +192,6 @@ Judgment text chunks:
 {json.dumps(relevant_chunks, ensure_ascii=False)}
 """
 
-    last_error = None
     retries = max(1, int(getattr(settings, "GEMINI_MAX_RETRIES", 2)))
     timeout_seconds = max(30, int(getattr(settings, "GEMINI_TIMEOUT_SECONDS", 90)))
 
@@ -205,17 +204,11 @@ Judgment text chunks:
             result = _safe_json_loads(response.text)
             break
         except Exception as exc:
-            last_error = exc
             if attempt < retries:
                 time.sleep(min(2 * attempt, 4))
             else:
-                # Graceful fallback for any Gemini failure (timeout/model/rate-limit/parse/network).
-                return local_fallback_extract(text)
-    else:
-        if last_error:
-            return local_fallback_extract(text)
-        return local_fallback_extract(text)
-    
+                raise RuntimeError(f"Gemini extraction failed: {str(exc)}") from exc
+
     # Fix: Validate that all actions have action_text_kn field
     # If Gemini returns actions without action_text_kn, we add it as None
     if "actions" in result and isinstance(result["actions"], list):
@@ -244,16 +237,9 @@ def run_ai_extraction(text: str) -> Dict:
         except Exception:
             order_date = None
 
-    raw_actions = result.get("actions", []) or []
-    if not raw_actions:
-        raw_actions = local_fallback_extract(text).get("actions", [])
-
     enriched_actions = []
-    for action in raw_actions:
+    for action in result.get("actions", []):
         enriched_actions.append(enrich_action_with_rules(action, order_date))
-
-    if not enriched_actions:
-        enriched_actions = local_fallback_extract(text).get("actions", [])
 
     result["actions"] = enriched_actions
     return result
