@@ -151,6 +151,7 @@
   "supporting_document": "Supporting Document",
   "upload": "Upload",
   "upload_pdf": "Upload PDF",
+  "upload_size_note": "Max file size: 50 MB",
   "upload_success": "Judgment uploaded successfully: {case_number}",
   "proof_upload_success": "Proof uploaded successfully.",
   "upload_failed": "Upload failed",

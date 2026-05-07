@@ -88,6 +88,7 @@ export default function CaseUpload({ onUploaded, lang = "en" }) {
             {uploading ? t.uploading : (t.upload_pdf || "Upload PDF")}
           </button>
         </div>
+        <p style={styles.helperNote}>{t.upload_size_note || "Max file size: 50 MB"}</p>
         {message && <p style={styles.message}>{message}</p>}
       </div>
 
@@ -178,6 +179,11 @@ const styles = {
     marginTop: "12px",
     fontSize: "14px",
     color: "#334155",
+  },
+  helperNote: {
+    margin: "8px 0 0",
+    fontSize: "12px",
+    color: "#64748b",
   },
   ccmsList: {
     display: "flex",
