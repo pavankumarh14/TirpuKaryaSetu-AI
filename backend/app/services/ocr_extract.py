@@ -10,6 +10,19 @@ from PIL import Image
 from app.config import settings
 
 
+def _looks_low_signal(text: str) -> bool:
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return True
+    if len(cleaned) < 80:
+        return True
+    alpha_chars = sum(ch.isalpha() for ch in cleaned)
+    # Mostly symbols/numbers/watermark-style content should still go through OCR.
+    if alpha_chars < 30:
+        return True
+    return False
+
+
 def extract_text_from_pdf(pdf_path: str) -> Dict:
     pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_CMD
 
@@ -21,7 +34,7 @@ def extract_text_from_pdf(pdf_path: str) -> Dict:
     for page_index, page in enumerate(doc, start=1):
         text = page.get_text("text").strip()
 
-        if not text:
+        if _looks_low_signal(text):
             ocr_used = True
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
             image_bytes = pix.tobytes("png")

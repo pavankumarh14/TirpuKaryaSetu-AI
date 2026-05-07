@@ -129,6 +129,20 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
         db.commit()
         raise HTTPException(status_code=500, detail=f"AI extraction failed: {str(e)}")
 
+    extracted_actions = result.get("actions", []) or []
+    extracted_fields = result.get("extractions", []) or []
+    has_minimum_output = bool(extracted_actions) or bool(extracted_fields)
+    if not has_minimum_output:
+        case.status = CaseStatus.PENDING
+        db.commit()
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Extraction could not identify usable case data from this PDF. "
+                "Please upload a clearer/digital PDF or verify OCR configuration."
+            ),
+        )
+
     # Update case metadata
     meta = result.get("case_metadata", {})
     if meta.get("case_number"):
@@ -159,7 +173,7 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
         case.language = meta["language"]
 
     # Save extractions
-    for field_item in result.get("extractions", []):
+    for field_item in extracted_fields:
         extraction = Extraction(
             case_id=case.id,
             field_name=field_item.get("field_name", ""),
@@ -171,7 +185,7 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
         db.add(extraction)
 
     # Save actions with all new bilingual + appeal + deadline fields
-    for item in result.get("actions", []):
+    for item in extracted_actions:
         deadline = item.get("deadline")
         appeal_window = item.get("appeal_window")
         if isinstance(deadline, str):
@@ -235,4 +249,4 @@ def extract_case(case_id: int, db: Session = Depends(get_db)):
         after_value={"status": "pending_review", "actions_extracted": len(result.get("actions", []))},
     )
 
-    return {"status": "success", "case_id": case.id, "actions_extracted": len(result.get("actions", []))}
+    return {"status": "success", "case_id": case.id, "actions_extracted": len(extracted_actions)}

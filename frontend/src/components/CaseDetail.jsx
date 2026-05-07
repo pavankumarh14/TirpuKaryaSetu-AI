@@ -11,6 +11,7 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
   const [busy, setBusy] = useState(false);
   const [extractStep, setExtractStep] = useState(0);
   const [extractError, setExtractError] = useState(null);
+  const [extractSuccess, setExtractSuccess] = useState("");
   const [auditLog, setAuditLog] = useState([]);
   const [showAudit, setShowAudit] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -29,11 +30,28 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
     setBusy(true);
     setExtractStep(0);
     setExtractError(null);
+    setExtractSuccess("");
     try {
       await triggerExtraction(caseItem.id);
-      const updated = await getCase(caseItem.id);
+      let updated = await getCase(caseItem.id);
+
+      // Poll briefly so newly committed actions/metadata are visible immediately.
+      for (let i = 0; i < 8; i += 1) {
+        const hasActions = Array.isArray(updated?.actions) && updated.actions.length > 0;
+        const extractionFinished = updated?.status && updated.status !== "extracting";
+        if (hasActions || extractionFinished) break;
+        await new Promise((resolve) => window.setTimeout(resolve, 700));
+        updated = await getCase(caseItem.id);
+      }
+
       onSelectCase?.(updated);
       onRefresh?.();
+      setExtractSuccess(
+        (t.extraction_success || "Extraction completed successfully.").replace(
+          "{count}",
+          String(updated?.actions?.length || 0)
+        )
+      );
     } catch (error) {
       console.error("Extraction failed", error);
       setExtractError(error?.message || "Extraction failed. Please check backend logs and retry.");
@@ -71,6 +89,8 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
   useEffect(() => {
     setAuditLog([]);
     setShowAudit(false);
+    setExtractSuccess("");
+    setExtractError(null);
   }, [caseItem?.id]);
 
   if (!caseItem) {
@@ -85,6 +105,44 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
   const hasActions = caseItem.actions?.length > 0;
   const hasCompleted = caseItem.actions?.some((a) => a.status === "completed");
   const orderedActions = [...(caseItem.actions || [])].sort((a, b) => a.id - b.id);
+  const actionTexts = orderedActions
+    .map((action) => (action?.source_evidence || action?.action_text || "").trim())
+    .filter(Boolean);
+
+  const outcomePriority = [
+    "is acquitted",
+    "acquitted",
+    "not found guilty",
+    "is convicted",
+    "convicted",
+    "appeal is allowed",
+    "appeal is dismissed",
+    "dismissed",
+    "disposed",
+    "returned to the accused",
+  ];
+
+  const outcomeCandidate = actionTexts.find((text) => {
+    const lowered = text.toLowerCase();
+    return outcomePriority.some((keyword) => lowered.includes(keyword));
+  }) || null;
+
+  const normalizeOutcome = (text) => {
+    if (!text) return null;
+    const lowered = text.toLowerCase();
+    if (lowered.includes("not found guilty") && !lowered.includes("acquitted")) {
+      return "Accused is acquitted of the charged offence as per court order.";
+    }
+    return text.slice(0, 320);
+  };
+
+  const caseOutcome = normalizeOutcome(outcomeCandidate);
+
+  const judgmentSnapshot = (() => {
+    if (!actionTexts.length) return null;
+    const nonOutcome = actionTexts.find((text) => text !== outcomeCandidate);
+    return (nonOutcome || actionTexts[0]).slice(0, 260);
+  })();
   const completedActions = orderedActions
     .map((action, index) => ({ ...action, caseActionNumber: index + 1 }))
     .filter((a) => a.status === "completed");
@@ -166,6 +224,12 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
         </div>
       )}
 
+      {extractSuccess && (
+        <div style={styles.successBanner}>
+          {extractSuccess}
+        </div>
+      )}
+
       {/* Appeal Window Alert for contempt-risk actions */}
       {contemptActions.length > 0 && (
         <div style={styles.appealBanner}>
@@ -187,16 +251,18 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
 
       {/* Fix: Translated info labels */}
       <div style={styles.metaGrid}>
-        <Info label={t.case_number} value={caseItem.case_number} />
-        <Info label={t.court_name} value={caseItem.court_name} />
-        <Info label={t.court_type} value={caseItem.court_type} />
-        <Info label={t.judgment_type} value={caseItem.judgment_type} />
-        <Info label={t.bench_judge || "Bench / Judge"} value={caseItem.bench_judge} />
-        <Info label={t.petitioner} value={caseItem.petitioner} />
-        <Info label={t.respondent_name || "Respondent"} value={caseItem.respondent_name} />
-        <Info label={t.department} value={caseItem.respondent_department} />
-        <Info label={t.language} value={caseItem.language} />
-        <Info label={t.status} value={t.lowercase?.[caseItem.status] || caseItem.status} />
+        <Info label={t.case_number} value={caseItem.case_number} lang={lang} />
+        <Info label={t.court_name} value={caseItem.court_name} lang={lang} />
+        <Info label={t.court_type} value={caseItem.court_type} lang={lang} />
+        <Info label={t.judgment_type} value={caseItem.judgment_type} lang={lang} />
+        <Info label={t.case_outcome || "Case Outcome"} value={caseOutcome} lang={lang} />
+        <Info label={t.judgment_snapshot || "Judgment Snapshot"} value={judgmentSnapshot} lang={lang} />
+        <Info label={t.bench_judge || "Bench / Judge"} value={caseItem.bench_judge} lang={lang} />
+        <Info label={t.petitioner} value={caseItem.petitioner} lang={lang} />
+        <Info label={t.respondent_name || "Respondent"} value={caseItem.respondent_name} lang={lang} />
+        <Info label={t.department} value={caseItem.respondent_department} lang={lang} />
+        <Info label={t.language} value={caseItem.language} lang={lang} />
+        <Info label={t.status} value={t.lowercase?.[caseItem.status] || caseItem.status} lang={lang} />
       </div>
 
       {/* Audit Trail Panel */}
@@ -282,11 +348,15 @@ export default function CaseDetail({ caseItem, onSelectCase, onRefresh, lang = "
   );
 }
 
-function Info({ label, value }) {
+function Info({ label, value, lang = "en" }) {
+  const isPendingExtraction =
+    !value || String(value).trim().toLowerCase() === "pending extraction";
   return (
     <div style={styles.infoCard}>
       <div style={styles.infoLabel}>{label}</div>
-      <div style={styles.infoValue}>{value || "Pending extraction"}</div>
+      <div style={styles.infoValue}>
+        {isPendingExtraction ? (lang === "kn" ? "ಗುರುತಿಸಲಾಗಿಲ್ಲ" : "Not identified") : value}
+      </div>
     </div>
   );
 }
@@ -386,6 +456,15 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: "12px",
+  },
+  successBanner: {
+    background: "#f0fdf4",
+    border: "1px solid #86efac",
+    borderRadius: "8px",
+    padding: "12px 16px",
+    color: "#166534",
+    marginBottom: "16px",
+    fontWeight: 600,
   },
   retryBtn: {
     border: "1px solid #b91c1c",

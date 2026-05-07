@@ -32,9 +32,12 @@ export default function App() {
       const orderedCases = [...(casesData || [])].sort((a, b) => a.id - b.id);
       setCases(orderedCases);
       setCasesLoadError("");
-      setSelectedCase((current) =>
-        current ? orderedCases.find((item) => item.id === current.id) || current : current
-      );
+      setSelectedCase((current) => {
+        if (!current) return current;
+        const stillExists = orderedCases.some((item) => item.id === current.id);
+        // Keep current full-detail object; list payload may not include actions.
+        return stillExists ? current : null;
+      });
       setStats(statsData || null);
       setReviewQueue(queueData || []);
       return orderedCases;

@@ -23,7 +23,7 @@ def chunk_text(text: str, chunk_size: int = 2500, overlap: int = 250) -> List[st
     return chunks
 
 
-def simple_retrieve_relevant_chunks(text: str, top_k: int = 6) -> List[str]:
+def simple_retrieve_relevant_chunks(text: str, top_k: int = 10) -> List[str]:
     chunks = chunk_text(text)
     scored = []
 
@@ -43,8 +43,31 @@ def simple_retrieve_relevant_chunks(text: str, top_k: int = 6) -> List[str]:
         score = sum(chunk.lower().count(keyword) for keyword in keywords)
         scored.append((score, chunk))
 
+    if not chunks:
+        return []
+
     scored.sort(key=lambda x: x[0], reverse=True)
-    return [chunk for score, chunk in scored[:top_k] if chunk.strip()]
+    top_scored = [chunk for score, chunk in scored[:top_k] if chunk.strip()]
+
+    # Coverage chunks ensure retrieval sees content spread across the full judgment.
+    coverage_indices = sorted(
+        set(
+            [
+                0,
+                max(0, len(chunks) // 4),
+                max(0, len(chunks) // 2),
+                max(0, (3 * len(chunks)) // 4),
+                len(chunks) - 1,
+            ]
+        )
+    )
+    coverage_chunks = [chunks[i] for i in coverage_indices if chunks[i].strip()]
+
+    merged: List[str] = []
+    for chunk in [*coverage_chunks, *top_scored]:
+        if chunk not in merged:
+            merged.append(chunk)
+    return merged
 
 
 def _safe_json_loads(raw_text: str) -> Dict:
