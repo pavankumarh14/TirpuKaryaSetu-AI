@@ -109,7 +109,7 @@ flowchart TD
     I1 --> J[Verified Action State]
     I2 --> J
     I3 --> J
-    I4 --> K[Rejected (not actionable)]
+    I4 --> K[Rejected - Not Actionable]
 
     J --> L[Execution by Department]
     L --> M[Proof Upload]
