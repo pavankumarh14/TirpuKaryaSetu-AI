@@ -93,6 +93,9 @@ export default function CaseUpload({ onUploaded, lang = "en" }) {
 
       <div style={styles.container}>
         <h3 style={styles.title}>{t.ccms_import_title || "Import from CCMS/CIS"}</h3>
+        <p style={styles.mockNote}>
+          {t.ccms_mock_note || "Mocking for now. In real-time, CCMS/CIS APIs will be called."}
+        </p>
         <p style={styles.subtext}>
           {t.ccms_import_subtext || "Disposed judgments fetched from CCMS/CIS will enter the same AI extraction and review workflow."}
         </p>
@@ -142,6 +145,7 @@ const styles = {
     color: "#1c1f26",
   },
   subtext: { margin: "0 0 14px", color: "#64748b", fontSize: "14px" },
+  mockNote: { margin: "0 0 6px", color: "#475569", fontSize: "12px", fontStyle: "italic" },
   row: {
     display: "flex",
     gap: "12px",
